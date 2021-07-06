@@ -1,10 +1,10 @@
 # This is the Makefile of ABACUS-base API
 
 #==========================
-# Compiler information 
+# Compiler information
 #==========================
 CPLUSPLUS     = mpiicpc
-CPLUSPLUS_MPI = mpiicpc 
+CPLUSPLUS_MPI = mpiicpc
 FFTW_DIR = /home/lrx/ABACUS/fftw3.3.9/fftw
 LAPACK_DIR = /opt/intel/compilers_and_libraries_2017.8.262/linux/mkl
 HONG_LAPACK        = -D__MKL -DMKL_ILP64
@@ -13,6 +13,16 @@ LAPACK_LIB_DIR     = ${LAPACK_DIR}/lib/intel64
 LAPACK_LIB         = -L${LAPACK_LIB_DIR} -Wl,--start-group -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64 -Wl,--end-group -Wl,-rpath=${LAPACK_LIB_DIR}
 OBJ_DIR = obj
 NP      = 4
+
+#============
+# Enzyme demo
+#============
+LLVM_CPP = clang++
+LLVM_OPT = opt
+LLVM_LINK = llvm-link
+LLVM_FLAGS = -O2 -fno-vectorize -fno-unroll-loops
+ENZYME_LIB_DIR = /usr/local/lib
+ENZYME_LIB = ${ENZYME_LIB_DIR}/ClangEnzyme-12.dylib
 
 #==========================
 # LIBS and INCLUDES
@@ -46,7 +56,7 @@ FP_OBJS=$(patsubst %.o, ${OBJ_DIR}/%.o, ${FP_OBJS_0})
 #==========================
 # MAKING OPTIONS
 #==========================
-base : 
+base :
 	@ make init
 	@ make -j $(NP) serial
 
@@ -54,8 +64,19 @@ init :
 	@ if [ ! -d $(OBJ_DIR) ]; then mkdir $(OBJ_DIR); fi
 	@ if [ ! -d $(OBJ_DIR)/README ]; then echo "This directory contains all of the .o files" > $(OBJ_DIR)/README; fi
 
-serial : ${FP_OBJS} 
-	${CPLUSPLUS} ${OPTS} $(FP_OBJS) ${LIBS} -o ${VERSION}.x 
+serial : ${FP_OBJS}
+	${CPLUSPLUS} ${OPTS} $(FP_OBJS) ${LIBS} -o ${VERSION}.x
+
+enzyme : matrix.cpp enzyme_example.cpp
+	${LLVM_CPP} matrix.cpp -D__NORMAL -S -emit-llvm -o matrix.ll -O2 -fno-vectorize -fno-slp-vectorize -fno-unroll-loops
+	${LLVM_CPP} enzyme_example.cpp -S -emit-llvm -o enzyme_example.ll -O2 -fno-vectorize -fno-slp-vectorize -fno-unroll-loops
+	${LLVM_LINK} matrix.ll enzyme_example.ll -o input.ll
+	${LLVM_OPT} input.ll -load=${ENZYME_LIB} -enzyme -o output.ll -S
+	${LLVM_CPP} output.ll -o enzyme_example
+	./enzyme_example
+
+clean-enzyme :
+	rm *.ll enzyme_example
 
 #==========================
 # rules
