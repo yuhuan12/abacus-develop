@@ -23,6 +23,8 @@ LLVM_LINK = llvm-link
 LLVM_FLAGS = -O2 -fno-vectorize -fno-unroll-loops
 ENZYME_LIB_DIR = /usr/local/lib
 ENZYME_LIB = ${ENZYME_LIB_DIR}/ClangEnzyme-12.dylib
+BLAS_INCLUDE = -I/usr/local/opt/openblas/include
+BLAS_LIB = /usr/local/opt/openblas/lib/libopenblas.a
 
 #==========================
 # LIBS and INCLUDES
@@ -68,11 +70,12 @@ serial : ${FP_OBJS}
 	${CPLUSPLUS} ${OPTS} $(FP_OBJS) ${LIBS} -o ${VERSION}.x
 
 enzyme : matrix.cpp enzyme_example.cpp
+	${LLVM_CPP} timer.cpp -S -emit-llvm -o timer.ll -O2 -fno-vectorize -fno-slp-vectorize -fno-unroll-loops
 	${LLVM_CPP} matrix.cpp -D__NORMAL -S -emit-llvm -o matrix.ll -O2 -fno-vectorize -fno-slp-vectorize -fno-unroll-loops
-	${LLVM_CPP} enzyme_example.cpp -S -emit-llvm -o enzyme_example.ll -O2 -fno-vectorize -fno-slp-vectorize -fno-unroll-loops
-	${LLVM_LINK} matrix.ll enzyme_example.ll -o input.ll
+	${LLVM_CPP} enzyme_example.cpp ${BLAS_INCLUDE} -S -emit-llvm -o enzyme_example.ll -O2 -fno-vectorize -fno-slp-vectorize -fno-unroll-loops
+	${LLVM_LINK} timer.ll matrix.ll enzyme_example.ll -o input.ll
 	${LLVM_OPT} input.ll -load=${ENZYME_LIB} -enzyme -o output.ll -S
-	${LLVM_CPP} output.ll -o enzyme_example
+	${LLVM_CPP} output.ll ${BLAS_LIB} -o enzyme_example
 	./enzyme_example
 
 clean-enzyme :
