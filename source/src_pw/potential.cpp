@@ -348,6 +348,7 @@ ModuleBase::matrix Potential::v_of_rho(
 	if(GlobalV::VH_IN_H)
 	{
 		v += H_Hartree_pw::v_hartree(GlobalC::ucell,GlobalC::pw, GlobalV::NSPIN, rho_in);
+		v += H_Hartree_pw::v_correction(GlobalC::ucell,GlobalC::pw, GlobalV::NSPIN, rho_in);
 	}
 
     // mohan add 2011-06-20

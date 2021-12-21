@@ -23,22 +23,23 @@ class H_Hartree_pw
 		const int &nspin,
 		const double*const*const rho);
 
-	void gauss_charge(
+	static void gauss_charge(
 		const UnitCell &cell, 
 		PW_Basis &pwb, 
 		complex<double> *N,
 		const int flag);
 	
-	int get_Z(string str);
+	static int get_Z(string str);
 
-	void V_correction(
+	static ModuleBase::matrix v_correction(
 		const UnitCell &cell,
 		PW_Basis &pwb, 
-		double **rho);
+		const int &nspin,
+		const double*const*const rho);
 
-	void cast_C2R(complex<double> *src, double* dst, int dim);
+	static void cast_C2R(complex<double> *src, double* dst, int dim);
 
-	void Leps(
+	static void Leps(
 		const UnitCell &ucell,
 		PW_Basis &pwb,
 		complex<double> *phi,
@@ -50,7 +51,7 @@ class H_Hartree_pw
 		complex<double> *lp // output
 	);
 	
-	void minimize(
+	static void minimize(
 		const UnitCell &ucell,
 		PW_Basis &pwb,
 		double *d_eps,
