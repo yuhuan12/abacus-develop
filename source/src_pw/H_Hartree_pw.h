@@ -59,6 +59,19 @@ class H_Hartree_pw
 		complex<double> *phi,
 		int &ncgsol);
 
+	// static void minimize_test(
+	// 	const UnitCell &ucell,
+	// 	PW_Basis &pwb,
+	// 	double *d_eps,
+	// 	const complex<double>* tot_N,
+	// 	complex<double> *phi,
+	// 	int &ncgsol);
+
+	static void test_res(const UnitCell &ucell,
+		PW_Basis &pwb,
+		const complex<double>* tot_N,
+		complex<double> *phi);
+
 	private:
 
 
