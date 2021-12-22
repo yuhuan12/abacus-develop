@@ -1,6 +1,6 @@
 #include "H_Hartree_pw.h"
 #include "diago_cg.h"
-#define eb_k 1
+#define eb_k 1.0
 #define EDEPS 1.0
 #define ediffsol 1e-7
 
