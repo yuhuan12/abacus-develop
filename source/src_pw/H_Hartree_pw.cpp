@@ -458,8 +458,11 @@ void H_Hartree_pw::minimize(
         resid[ig] = lp[ig] + tot_N[ig];
     }
 
-    cout << "-------resid now-----------"<<endl;
-    test_print(resid, 10);
+    // cout << "-------resid now-----------"<<endl;
+    // test_print(resid, 10);
+
+    cout << "r2:" <<endl;
+    cout<< Diago_CG::ddot_real(pwb.ngmc, resid, resid)<<endl;
     // precondition of the residue, z = invLr
     for(int ig = pwb.gstart; ig < pwb.ngmc; ig++)
     {
@@ -510,8 +513,8 @@ void H_Hartree_pw::minimize(
             lp
         );
 
-        cout <<"lp after leps"<<endl;
-        test_print(lp, 10);
+        // cout <<"lp after leps"<<endl;
+        // test_print(lp, 10);
         // calculate alpha
         alpha = -rinvLr / Diago_CG::ddot_real(pwb.ngmc, d, lp);
         cout<<"alpha: "<<alpha<<endl;
@@ -524,8 +527,8 @@ void H_Hartree_pw::minimize(
         }
         // update resid
 
-        cout << "-------resid before update -----------"<<endl;
-        test_print(resid, 10);
+        // cout << "-------resid before update -----------"<<endl;
+        // test_print(resid, 10);
         for(int ig = pwb.gstart; ig < pwb.ngmc; ig++)
         {
             // resid[ig].real() += alpha * lp[ig].real();
@@ -533,8 +536,8 @@ void H_Hartree_pw::minimize(
             resid[ig] += alpha * lp[ig];
         }
 
-        cout << "-------resid after update -----------"<<endl;
-        test_print(resid, 10);
+        // cout << "-------resid after update -----------"<<endl;
+        // test_print(resid, 10);
         // precond one more time..
         for(int ig = pwb.gstart; ig < pwb.ngmc; ig++)
         {
@@ -542,6 +545,9 @@ void H_Hartree_pw::minimize(
             // z[ig].imag() = gsqu[ig].real() * resid[ig].imag();
             z[ig] = gsqu[ig] * resid[ig];
         }
+
+        cout << "r2:" <<endl;
+        cout<< Diago_CG::ddot_real(pwb.ngmc, resid, resid)<<endl;
         // calculate beta
         beta = 1.0 / rinvLr;
         rinvLr = Diago_CG::ddot_real(pwb.ngmc, resid, z);
@@ -608,8 +614,6 @@ void H_Hartree_pw::Leps(
 {
     for(int i=pwb.gstart; i<pwb.ngmc; i++)
     {
-        // TODO: have 2pi or not ?
-
         gradphi_x[i].real(phi[i].imag() * pwb.gcar[i].x * ModuleBase::TWO_PI);
         gradphi_y[i].real(phi[i].imag() * pwb.gcar[i].y * ModuleBase::TWO_PI);
         gradphi_z[i].real(phi[i].imag() * pwb.gcar[i].z * ModuleBase::TWO_PI);
@@ -617,14 +621,6 @@ void H_Hartree_pw::Leps(
         gradphi_x[i].imag(-phi[i].real() * pwb.gcar[i].x * ModuleBase::TWO_PI);
         gradphi_y[i].imag(-phi[i].real() * pwb.gcar[i].y * ModuleBase::TWO_PI);
         gradphi_z[i].imag(-phi[i].real() * pwb.gcar[i].z * ModuleBase::TWO_PI);
-
-        // gradphi_x[i].real(- phi[i].imag() * pwb.gcar[i].x);
-        // gradphi_y[i].real(- phi[i].imag() * pwb.gcar[i].y);
-        // gradphi_z[i].real(- phi[i].imag() * pwb.gcar[i].z);
-
-        // gradphi_x[i].imag(phi[i].real() * pwb.gcar[i].x);
-        // gradphi_y[i].imag(phi[i].real() * pwb.gcar[i].y);
-        // gradphi_z[i].imag(phi[i].real() * pwb.gcar[i].z);
     }
     // build real space vectors todo FFT
     complex<double> *gradphi_x_real = new complex<double>[pwb.nrxx];
@@ -661,8 +657,6 @@ void H_Hartree_pw::Leps(
         gradphi_y_real[j].imag(gradphi_y_real[j].imag() * epsilon[2*j+1]);
         gradphi_z_real[j].imag(gradphi_z_real[j].imag() * epsilon[2*j+1]);
 
-        // phi_work_real[j].real(phi_real[j].real() * eb_k);
-        // phi_work_real[j].imag(phi_real[j].imag() * eb_k);
         phi_work_real[j] = phi_real[j] * eb_k;
     }
 
@@ -674,19 +668,6 @@ void H_Hartree_pw::Leps(
     pwb.FFT_chg.FFT3D(phi_work_real, -1);
     pwb.FFT_chg.FFT3D(phi_real, -1);
 
-    // normalization with nrxx..
-    // don't need normalization
-    // for(int j=0; j<pwb.nrxx; j++)
-    // {
-    //     gradphi_x_real[j] /= pwb.nrxx;
-    //     gradphi_y_real[j] /= pwb.nrxx;
-    //     gradphi_z_real[j] /= pwb.nrxx;
-
-    //     phi_work_real[j] /= pwb.nrxx;
-    //     phi_real[j] /= pwb.nrxx;
-    // }
-
-    // use 0 or ngmc_start
     for(int ig=pwb.gstart; ig<pwb.ngmc; ig++)
     {
         gradphi_x[ig] = gradphi_x_real[pwb.ig2fftc[ig]];
