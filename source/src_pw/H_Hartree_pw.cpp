@@ -301,10 +301,10 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     // to real space
     pwb.FFT_chg.FFT3D(PS_TOTN_real, 1);
 
-    double *r_work = new double[pwb.nrxx*2];
-    cast_C2R(PS_TOTN_real, r_work, pwb.nrxx);
+    // double *r_work = new double[pwb.nrxx*2];
+    // cast_C2R(PS_TOTN_real, r_work, pwb.nrxx);
 
-    delete [] PS_TOTN_real;
+    // delete [] PS_TOTN_real;
 
     // shapefunction value varies from 0 in the solute to 1 in the solvent
     // epsilon = 1.0 + (eb_k - 1) * shape function
@@ -313,16 +313,18 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     double sigma_k = 0.6 ;
 
     // build epsilon in real space (nrxx)
-    double *epsilon = new double[pwb.nrxx*2];
-    double *shapefunc = new double[pwb.nrxx*2];
-    for(int i=0; i<pwb.nrxx*2; i++)
+    double *epsilon = new double[pwb.nrxx];
+    double *shapefunc = new double[pwb.nrxx];
+    for(int i=0; i<pwb.nrxx; i++)
     {
-	    shapefunc[i] = erfc((log(r_work[i]) / nc_k) / sqrt(2.0) / sigma_k ) / 2;
+	    shapefunc[i] = erfc((log(PS_TOTN_real[i].real()) / nc_k) / sqrt(2.0) / sigma_k ) / 2;
 		epsilon[i] = 1 + (eb_k - 1) * shapefunc[i];
 	}
 
+    delete [] PS_TOTN_real;
+
     // fill in epsilon with ones (Used to test)
-    for(int i=0; i<2*pwb.nrxx; i++)
+    for(int i=0; i<pwb.nrxx; i++)
     {
         epsilon[i] = 1.0;
     }
@@ -344,7 +346,7 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     delete [] N;
     delete [] PS_TOTN;
     delete [] TOTN;
-    delete [] r_work;
+    // delete [] r_work;
     delete [] epsilon;
     delete [] shapefunc;
 
@@ -372,7 +374,7 @@ void H_Hartree_pw::cast_C2R(complex<double> *src, double* dst, int dim)
 void H_Hartree_pw::minimize(
     const UnitCell &ucell,
     PW_Basis &pwb,
-    double *d_eps, // dim=nrxx*2
+    double *d_eps, // dim=nrxx
     const complex<double>* tot_N,
     complex<double> *phi,
     int &ncgsol // output
@@ -407,7 +409,7 @@ void H_Hartree_pw::minimize(
     for(int ig=pwb.gstart; ig<pwb.ngmc; ig++)
     {
         gg = pwb.get_NormG_cartesian(ig);
-        gsqu[ig].real(1.0 / (gg * ucell.tpiba2)); // without kappa_2
+        gsqu[ig].real(1.0 / (gg * ucell.tpiba2 )); // without kappa_2
         gsqu[ig].imag(0);
     }
 
@@ -604,7 +606,7 @@ void H_Hartree_pw::Leps(
     const UnitCell &ucell,
     PW_Basis &pwb,
     complex<double> *phi,
-    double *epsilon, // epsilon from shapefunc, dim=nrxx*2
+    double *epsilon, // epsilon from shapefunc, dim=nrxx
     complex<double> *gradphi_x, // dim=ngmc
     complex<double> *gradphi_y,
     complex<double> *gradphi_z,
@@ -649,13 +651,18 @@ void H_Hartree_pw::Leps(
     // multiple grad x, y, z with epsilon in real space(nrxx) 
     for(int j=0; j<pwb.nrxx; j++)
     {
-        gradphi_x_real[j].real(gradphi_x_real[j].real() * epsilon[2*j]);
-        gradphi_y_real[j].real(gradphi_y_real[j].real() * epsilon[2*j]);
-        gradphi_z_real[j].real(gradphi_z_real[j].real() * epsilon[2*j]);
+        // gradphi_x_real[j].real(gradphi_x_real[j].real() * epsilon[2*j]);
+        // gradphi_y_real[j].real(gradphi_y_real[j].real() * epsilon[2*j]);
+        // gradphi_z_real[j].real(gradphi_z_real[j].real() * epsilon[2*j]);
 
-        gradphi_x_real[j].imag(gradphi_x_real[j].imag() * epsilon[2*j+1]);
-        gradphi_y_real[j].imag(gradphi_y_real[j].imag() * epsilon[2*j+1]);
-        gradphi_z_real[j].imag(gradphi_z_real[j].imag() * epsilon[2*j+1]);
+        // gradphi_x_real[j].imag(gradphi_x_real[j].imag() * epsilon[2*j+1]);
+        // gradphi_y_real[j].imag(gradphi_y_real[j].imag() * epsilon[2*j+1]);
+        // gradphi_z_real[j].imag(gradphi_z_real[j].imag() * epsilon[2*j+1]);
+
+        // dim of epsilon = pwb.nrxx * 1 ! (complex mode)
+        gradphi_x_real[j] *= epsilon[j];
+        gradphi_y_real[j] *= epsilon[j];
+        gradphi_z_real[j] *= epsilon[j];
 
         phi_work_real[j] = phi_real[j] * eb_k;
     }
