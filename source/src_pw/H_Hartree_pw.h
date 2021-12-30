@@ -67,6 +67,16 @@ class H_Hartree_pw
 	// 	complex<double> *phi,
 	// 	int &ncgsol);
 
+	static void createcavity(const UnitCell &ucell,
+    	PW_Basis &pwb,
+    	const complex<double>* PS_TOTN);
+
+	static void lapl_rho( const std::complex<double> *rhog, double *lapn );
+
+	static void shape_gradn( const complex<double> *PS_TOTN ,
+        PW_Basis &pw,
+        double *eprime );
+
 	static void test_res(const UnitCell &ucell,
 		PW_Basis &pwb,
 		const complex<double>* tot_N,

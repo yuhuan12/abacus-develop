@@ -3,6 +3,9 @@
 #define eb_k 1.0
 #define EDEPS 1.0
 #define ediffsol 1e-7
+#define nc_k 0.00037
+#define sigma_k 0.6
+#define tau 0.1470 
 
 double H_Hartree_pw::hartree_energy=0.0;
 
@@ -180,7 +183,7 @@ ModuleBase::matrix H_Hartree_pw::v_hartree(
 
 void H_Hartree_pw::gauss_charge(const UnitCell &cell, PW_Basis &pwb, complex<double> *N, const int flag)
 {
-	const double delta_grd = pow(cell.omega / pwb.ngmc, 1.0 / 3) ;    //(GRIDC%NPLWV) = ngmc?
+	const double delta_grd = pow(cell.omega / pwb.ngmc, 1.0 / 3) ;    //unit bohr??
     const double sigma_nc_k = 1.6 * delta_grd ;
 	
 	// complex<double> *N = new complex<double>[pwb.ngmc] ;
@@ -198,7 +201,7 @@ void H_Hartree_pw::gauss_charge(const UnitCell &cell, PW_Basis &pwb, complex<dou
 			{
                 //G^2
                 double gg = pwb.get_NormG_cartesian(ig);
-		        gg = gg * ModuleBase::TWO_PI * ModuleBase::TWO_PI; 
+		        gg = gg * cell.tpiba; 
 
                 // gauss ionic charge
 				if(flag == 1)    
@@ -217,11 +220,37 @@ void H_Hartree_pw::gauss_charge(const UnitCell &cell, PW_Basis &pwb, complex<dou
     }
 }
 
-int H_Hartree_pw::get_Z(string str)
+int H_Hartree_pw::get_Z(string atom_type)
 {
-    if(str == "H") return 1;
-    else if(str == "O") return 8;
-    else return 1;
+	map<string, string> data;
+
+    ifstream fin("periodtable.txt");//filename.c_str()
+	if (!fin)
+	{
+		cerr<<"input file does not exist"<<endl;
+		return 0;
+	}
+	while(!fin.eof())
+	{
+		string str;
+		getline(fin,str);
+	
+		int pos=str.find(":");
+		string key=str.substr(0,pos);
+		string value=str.substr(pos+1,str.length());
+		data[key]=value;
+		if (!fin.good())
+			break;
+	}
+	
+	map<string,string>::iterator iter=data.find("atom_type");
+	
+	if (iter==data.end())
+	{
+		return 0;
+	}
+	return iter->second;
+		
 }
 
 //
@@ -309,8 +338,6 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     // shapefunction value varies from 0 in the solute to 1 in the solvent
     // epsilon = 1.0 + (eb_k - 1) * shape function
 
-    double nc_k = 0.0025 ; //ang^-3
-    double sigma_k = 0.6 ;
 
     // build epsilon in real space (nrxx)
     double *epsilon = new double[pwb.nrxx];
@@ -716,5 +743,198 @@ void H_Hartree_pw::Leps(
         // lp[ig] -= phi_work[ig];
 
     }
+}
+
+
+void H_Hartree_pw::createcavity(
+    const UnitCell &ucell,
+    PW_Basis &pwb,
+    const complex<double>* PS_TOTN  
+)
+{
+
+    
+    ModuleBase::Vector3<double> *nablan ;
+    double *nablan_2 = (double*)malloc(pwb.ngmc * sizeof(double));
+    double *sqrt_nablan_2 = (double*)malloc(pwb.ngmc * sizeof(double));
+    double *lapn = (double*)malloc(pwb.ngmc * sizeof(double));
+
+    // nabla n
+    GGA_PW::grad_rho( PS_TOTN , nablan );
+
+    //  |\nabla n |^2 = nablan_2 
+    for (int ir=0;ir<pwb.nrxx;ir++)
+    {
+        nablan_2[ir] = pow(nablan[ir].x,2) +pow(nablan[ir].y,2)+pow(nablan[ir].z,2) ;
+    }
+    
+    // Laplacian of n
+    lapl_rho( PS_TOTN , lapn) ;
+
+    //-------------------------------------------------------------
+    //add -Lap(n)/|\nabla n| to vwork and copy \sqrt(|\nabla n|^2) 
+    //to sqrt_nablan_2
+    //-------------------------------------------------------------
+    double *vwork = (double*)malloc(pwb.ngmc * sizeof(double));
+
+    for (int ir=0;ir<pwb.nrxx;ir++)
+    {
+        tmp = sqrt(nablan_2[ir]);
+        vwork(ir) = vwork(ir) - (lapn[ir])/tmp ;
+        sqrt_nablan_2[ir] = tmp ;
+    }
+
+    //-------------------------------------------------------------
+    //term1 = gamma*A / n, where
+    //gamma * A = exp(-(log(n/n_c))^2 /(2 sigma^2)) /(sigma * sqrt(2*pi) )
+    //-------------------------------------------------------------
+    shape_gradn(PS_TOTN , term1) ;
+
+    //-------------------------------------------------------------
+    //quantum surface area, integral of (gamma*A / n) * |\nabla n| 
+    //=term1 * sqrt_nablan_2
+    //-------------------------------------------------------------
+    double qs = 0;
+    double Acav = 0;
+
+    for (int ir=0;ir<pwb.nrxx;ir++)
+    {
+        qs = qs + (term1[ir]) * (sqrt_nablan_2[ir]) ;
+
+        //   1/ |nabla n|
+        sqrt_nablan_2[ir] = 1/sqrt_nablan_2[ir] ;
+
+    }
+    //-------------------------------------------------------------
+    //cavitation energy
+    //-------------------------------------------------------------
+    Acav = tau * qs ;
+
+    //  packs the real array into a complex one
+    complex<double> *inv_gn = new complex<double>[pwb.nrxx];
+    cast_R2C(sqrt_nablan_2, inv_gn, pwb.nrxx);
+
+    //  to G space
+    pwb.FFT_chg.FFT3D(inv_gn.data(), -1);
+    complex<double> *inv_gn_g = new complex<double>[pwb.ngmc];
+
+     for (int ig = pwb.gstart; ig<pwb.ngmc; ig++)
+    {
+        const int j = pwb.ig2fftc[ig];
+        if(pwb.gg[ig] >= 1.0e-12) 
+        {
+            inv_gn_g[ig] = inv_gn[j] ;
+        }
+    }
+
+    // \nabla(1 / |\nabla n|), ggn in real space
+    ModuleBase::Vector3<double> *ggn;
+    GGA_PW::grad_rho( inv_gn_g , ggn );
+
+    //-------------------------------------------------------------
+    //add -(\nabla n . \nabla(1/ |\nabla n|)) to Vcav in real space
+    //and multiply by term1 = gamma*A/n in real space
+    //-------------------------------------------------------------
+    for(int ir=0;ir<pwb.nrxx;ir++)
+    {
+        tmp = (nablan[ir].x*ggn[ir].x + nablan[ir].y*ggn[ir].y + nablan[ir].z*ggn[ir].z) * term1[ir] ;
+        vwork[ir] = vwork[ir] - tmp;
+    }
+
+    complex<double> *Vcav = new complex<double>[pwb.nrxx];
+    cast_R2C(vwork, Vcav, pwb.nrxx) ;
+
+    //  to G space
+    pwb.FFT_chg.FFT3D(Vcav.data(), -1);
+    complex<double> *Vcav_g = new complex<double>[pwb.ngmc];
+
+     for (int ig = pwb.gstart; ig<pwb.ngmc; ig++)
+    {
+        const int j = pwb.ig2fftc[ig];
+        if(pwb.gg[ig] >= 1.0e-12) 
+        {
+            Vcav_g[ig] = Vcav[j] ;
+        }
+    }
+    Vcav_g = Vcav_g *tau ;
+
+
+
+}
+
+
+void H_Hartree_pw::lapl_rho( const std::complex<double> *rhog, double *lapn )
+{
+    std::complex<double> *gdrtmpg = new std::complex<double>[GlobalC::pw.ngmc];
+    ModuleBase::GlobalFunc::ZEROS(gdrtmpg, GlobalC::pw.ngmc);
+
+    std::complex<double> *Porter = GlobalC::UFFT.porter;
+
+    // the formula is : rho(r)^prime = \int iG * rho(G)e^{iGr} dG
+    for(int ig=0; ig<GlobalC::pw.ngmc; ig++)
+        gdrtmpg[ig] = rhog[ig];
+
+    // calculate the charge density gradient in reciprocal space.
+    ModuleBase::GlobalFunc::ZEROS(Porter, GlobalC::pw.nrxx);
+    for(int ig=0; ig<GlobalC::pw.ngmc; ig++)
+        Porter[ GlobalC::pw.ig2fftc[ig] ] = gdrtmpg[ig]* pow(std::complex<double>(GlobalC::pw.get_G_cartesian_projection(ig, 0), 0.0),2);
+    // bring the gdr from G --> R
+    GlobalC::pw.FFT_chg.FFT3D(Porter, 1);
+    // remember to multily 2pi/a0, which belongs to G vectors.
+    for(int ir=0; ir<GlobalC::pw.nrxx; ir++)
+        lapn[ir] =lapn[ir]-Porter[ir].real() * pow(GlobalC::ucell.tpiba，2）;
+
+    // calculate the charge density gradient in reciprocal space.
+    ModuleBase::GlobalFunc::ZEROS(Porter, GlobalC::pw.nrxx);
+    for(int ig=0; ig<GlobalC::pw.ngmc; ig++)
+        Porter[GlobalC::pw.ig2fftc[ig]] = gdrtmpg[ig] * pow(std::complex<double>(GlobalC::pw.get_G_cartesian_projection(ig, 1), 0.0),2);
+    // bring the gdr from G --> R
+    GlobalC::pw.FFT_chg.FFT3D(Porter, 1);
+    // remember to multily 2pi/a0, which belongs to G vectors.
+    for(int ir=0; ir<GlobalC::pw.nrxx; ir++)
+        lapn[ir] = lapn[ir]-Porter[ir].real() * pow(GlobalC::ucell.tpiba,2);
+
+    // calculate the charge density gradient in reciprocal space.
+    ModuleBase::GlobalFunc::ZEROS(Porter, GlobalC::pw.nrxx);
+    for(int ig=0; ig<GlobalC::pw.ngmc; ig++)
+        Porter[GlobalC::pw.ig2fftc[ig]] = gdrtmpg[ig] * pow(std::complex<double>(GlobalC::pw.get_G_cartesian_projection(ig, 2), 0.0),2);
+    // bring the gdr from G --> R
+    GlobalC::pw.FFT_chg.FFT3D(Porter, 1);
+    // remember to multily 2pi/a0, which belongs to G vectors.
+    for(int ir=0; ir<GlobalC::pw.nrxx; ir++)
+        lapn[ir] = lapn[ir]-Porter[ir].real() * pow(GlobalC::ucell.tpiba,2);
+
+    delete[] gdrtmpg;
+    return;
+}
+
+
+
+//calculates first derivative of the shape function  wrt CHTOT 
+//in realspace
+// exp(-(log(n/n_c))^2 /(2 sigma^2)) /(sigma * sqrt(2*pi) )/n
+void H_Hartree_pw::shape_gradn( const complex<double> *PS_TOTN ,
+                                PW_Basis &pw,
+                                double *eprime )
+{
+     // Build a nrxx vector to DO FFT .
+    complex<double> *PS_TOTN_real = new complex<double>[pwb.nrxx];
+
+    for(int ig=0; ig<pwb.ngmc; ig++)
+    {
+        PS_TOTN_real[pwb.ig2fftc[ig]] = PS_TOTN[ig];
+    }
+
+    // to real space
+    pwb.FFT_chg.FFT3D(PS_TOTN_real, 1);
+
+    double epr_c = 1.0/sqrt(ModuleBase::TWO_PI)/sigma_k ;
+    double epr_z = 0 ;
+    for(int ir=0; ir<pw.nrxx; ir++)
+    {
+        epr_z = log(PS_TOTN_real[ir].real()/nc_k)/sqrt(2)/sigma_k ;
+        eprime[ir] = epr_c*(exp(-pow(epr_z,2))/PS_TOTN_real[ir].real() ;
+    }
+    
 }
 
