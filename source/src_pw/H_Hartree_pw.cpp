@@ -2,14 +2,7 @@
 #include "diago_cg.h"
 #define eb_k 80
 #define EDEPS 1.0
-<<<<<<< HEAD
 #define ediffsol 1e-3
-=======
-#define ediffsol 1e-7
-#define nc_k 0.00037
-#define sigma_k 0.6
-#define tau 0.1470 
->>>>>>> 61ebda297f681fbf6e1ea535b66d39c5ac6a56bf
 
 double H_Hartree_pw::hartree_energy=0.0;
 
@@ -261,9 +254,8 @@ void H_Hartree_pw::gauss_charge(const UnitCell &cell, PW_Basis &pwb, complex<dou
     }
 }
 
-int H_Hartree_pw::get_Z(string atom_type)
+int H_Hartree_pw::get_Z(string str)
 {
-<<<<<<< HEAD
     if(str == "H") 
     {
         return 1;
@@ -273,37 +265,6 @@ int H_Hartree_pw::get_Z(string atom_type)
         return 8;
     }
     else return 1;
-=======
-	map<string, string> data;
-
-    ifstream fin("periodtable.txt");//filename.c_str()
-	if (!fin)
-	{
-		cerr<<"input file does not exist"<<endl;
-		return 0;
-	}
-	while(!fin.eof())
-	{
-		string str;
-		getline(fin,str);
-	
-		int pos=str.find(":");
-		string key=str.substr(0,pos);
-		string value=str.substr(pos+1,str.length());
-		data[key]=value;
-		if (!fin.good())
-			break;
-	}
-	
-	map<string,string>::iterator iter=data.find("atom_type");
-	
-	if (iter==data.end())
-	{
-		return 0;
-	}
-	return iter->second;
-		
->>>>>>> 61ebda297f681fbf6e1ea535b66d39c5ac6a56bf
 }
 
 //
@@ -397,11 +358,8 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     // shapefunction value varies from 0 in the solute to 1 in the solvent
     // epsilon = 1.0 + (eb_k - 1) * shape function
 
-<<<<<<< HEAD
     double nc_k = 0.00037; //ang^-3
     double sigma_k = 0.6 ;
-=======
->>>>>>> 61ebda297f681fbf6e1ea535b66d39c5ac6a56bf
 
     // build epsilon in real space (nrxx)
     double *epsilon = new double[pwb.nrxx];
@@ -825,7 +783,7 @@ void H_Hartree_pw::Leps(
     }
 }
 
-
+/*
 void H_Hartree_pw::createcavity(
     const UnitCell &ucell,
     PW_Basis &pwb,
@@ -1017,4 +975,4 @@ void H_Hartree_pw::shape_gradn( const complex<double> *PS_TOTN ,
     }
     
 }
-
+*/
