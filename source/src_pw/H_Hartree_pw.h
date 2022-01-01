@@ -70,7 +70,8 @@ class H_Hartree_pw
 	static void test_res(const UnitCell &ucell,
 		PW_Basis &pwb,
 		const complex<double>* tot_N,
-		complex<double> *phi);
+		complex<double> *phi,
+		double *d_eps);
 
 	private:
 
