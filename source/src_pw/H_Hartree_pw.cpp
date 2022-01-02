@@ -1,15 +1,9 @@
 #include "H_Hartree_pw.h"
 #include "diago_cg.h"
+#include "global.h"
 #define eb_k 80
 #define EDEPS 1.0
-<<<<<<< HEAD
 #define ediffsol 1e-3
-=======
-#define ediffsol 1e-7
-#define nc_k 0.00037
-#define sigma_k 0.6
-#define tau 0.1470 
->>>>>>> 61ebda297f681fbf6e1ea535b66d39c5ac6a56bf
 
 double H_Hartree_pw::hartree_energy=0.0;
 
@@ -44,20 +38,40 @@ void test_tot_rho(complex<double> *rho, int len, double omega)
     return;
 }
 
+void test_tot_rho(double *rho, int len, double omega)
+{
+    double res=0;
+    for(int i=0; i<len; i++)
+    {
+        res+=rho[i];
+    }
+    cout<<"~~~~~~~ test rho ~~~~~~~~"<<endl;
+    cout<<res * omega / len<<endl;
+    cout<<endl;
+    return;
+}
+
 void test_tot_rho_G(complex<double> *rho_G, PW_Basis &pwb, double omega)
 {
-    complex<double> *rho_R = new complex<double>[pwb.nrxx];
+    // complex<double> *rho_R = new complex<double>[pwb.nrxx];
+    // ModuleBase::GlobalFunc::ZEROS( rho_R, pwb.nrxx);
+    // for(int ig=pwb.gstart; ig<pwb.ngmc; ig++)
+    // {
+    //     rho_R[pwb.ig2fftc[ig]] = rho_G[ig];
+    // }
+    // pwb.FFT_chg.FFT3D(rho_R, 1);
+    // cout<<"rho_R < 0"<<endl;
+    // test_tot_rho(rho_R, pwb.nrxx, omega);
+    double *rho_R = new double[pwb.nrxx];
+    GlobalC::UFFT.ToRealSpace(rho_G, rho_R);
+    double res=0;
     for(int i=0; i<pwb.nrxx; i++)
     {
-        rho_R[i].real(0);
-        rho_R[i].imag(0);
+        res+=rho_R[i];
     }
-    for(int ig=pwb.gstart; ig<pwb.ngmc; ig++)
-    {
-        rho_R[pwb.ig2fftc[ig]] = rho_G[ig];
-    }
-    pwb.FFT_chg.FFT3D(rho_R, 1);
-    test_tot_rho(rho_R, pwb.nrxx, omega);
+    cout<<"~~~~~~~ test rho ~~~~~~~~"<<endl;
+    cout<<res * omega / pwb.nrxx<<endl;
+    cout<<endl;
 
 }
 
@@ -93,16 +107,16 @@ void H_Hartree_pw::test_res(const UnitCell &ucell,
         Ax
     );
 
-    // cout <<"~~~~~~~~~~ test ~~~~~~~~~~~~~"<<endl;
+    cout <<"~~~~~~~~~~ test ~~~~~~~~~~~~~"<<endl;
 
-    // cout<<"Ax:"<<endl;
-    // test_print(Ax, 10);
+    cout<<"Ax:"<<endl;
+    test_print(Ax, 10);
 
-    // cout<<"b: "<<endl;
-    // test_print((complex<double>*)tot_N, 10);
+    cout<<"b: "<<endl;
+    test_print((complex<double>*)tot_N, 10);
 
-    // cout<<"============= result phi: ============="<<endl;
-    // test_print(phi, 10);
+    cout<<"============= result phi: ============="<<endl;
+    test_print(phi, 10);
 }
 
 //--------------------------------------------------------------------
@@ -221,49 +235,70 @@ ModuleBase::matrix H_Hartree_pw::v_hartree(
 
 void H_Hartree_pw::gauss_charge(const UnitCell &cell, PW_Basis &pwb, complex<double> *N, const int flag)
 {
-	const double delta_grd = pow(cell.omega / pwb.ngmc, 1.0 / 3) ;    //unit bohr??
+	const double delta_grd = pow(cell.omega / pwb.nrxx, 1.0 / 3) ;    //unit bohr??
     const double sigma_nc_k = 1.6 * delta_grd ;
-	
+    
+	ModuleBase::GlobalFunc::ZEROS( N, pwb.ngmc);
 	// complex<double> *N = new complex<double>[pwb.ngmc] ;
 
     pwb.setup_structure_factor();   //call strucFac(ntype,ngmc) 
+
+    cout<<"cell.tpiba2: "<<cell.tpiba2<<endl;
+    cout<<"cell.omega: "<<cell.omega<<endl;
+    cout<<"ntype: "<<cell.ntype<<endl;
 
     for (int it=0; it<cell.ntype; it++)
     {
 	    double RCS = cell.atoms[it].r[cell.atoms[it].mesh-1] ;
 	    double sigma_rc_k = RCS / 2.5 ;
+        cout<<cell.atoms[it].psd<<endl;
+        cout<<"na:"<<cell.atoms[it].na<<endl;
+        // for (int ia=0; ia<cell.atoms[it].na; ia++)
+		// {
+        for(int ig=0; ig<pwb.ngmc; ig++)  // ngmc : num. of G vectors within ggchg in each proc.
+        {
+            //G^2
+            double gg = pwb.get_NormG_cartesian(ig);
+            gg = gg * cell.tpiba2; 
 
-        for (int ia=0; ia<cell.atoms[it].na; ia++)
-		{
-            for(int ig=pwb.gstart; ig<pwb.ngmc; ig++)  // ngmc : num. of G vectors within ggchg in each proc.
-			{
-                //G^2
-                double gg = pwb.get_NormG_cartesian(ig);
-		        gg = gg * cell.tpiba2; 
-
-                // gauss ionic charge
-				if(flag == 1)    
-                {
-                    //need Z(proton num.) 
-                    N[ig].real(N[ig].real() - get_Z(cell.atoms[it].psd) * pwb.strucFac(it, ig).real() * exp(-0.5 *gg*(sigma_nc_k * sigma_nc_k)));
-                    N[ig].imag(N[ig].imag() - get_Z(cell.atoms[it].psd) * pwb.strucFac(it, ig).imag() * exp(-0.5 *gg*(sigma_nc_k * sigma_nc_k)));
-				}
-				if(flag == 3)    // pseudo core
-                {
-                    N[ig].real(N[ig].real()+(get_Z(cell.atoms[it].psd)-cell.atoms[it].zv) * pwb.strucFac(it, ig).real() * exp(-0.5*gg*(sigma_rc_k*sigma_rc_k))); 
-                    N[ig].imag(N[ig].imag()+(get_Z(cell.atoms[it].psd)-cell.atoms[it].zv) * pwb.strucFac(it, ig).imag() * exp(-0.5*gg*(sigma_rc_k*sigma_rc_k))); 
-				}
+            // gauss ionic charge
+            // if(ig<20)
+            // {
+            //     cout<<"get_Z(): "<<get_Z(cell.atoms[it].psd)<<endl;
+            //     cout<<"strucFac: "<<pwb.strucFac(it, ig).real()<<" "<<pwb.strucFac(it, ig).imag()<<endl;
+            //     cout<<"gg: "<<gg<<endl;
+            //     cout<<"sigma_nc_k: "<<sigma_nc_k<<endl;
+            //     cout<<"exp(): "<<exp(-0.5 *gg*(sigma_nc_k * sigma_nc_k))<<endl;
+            //     cout<<endl;
+            // }
+            if(flag == 1)    
+            {
+                //need Z(proton num.) 
+                // N[ig].real(N[ig].real() + get_Z(cell.atoms[it].psd) * pwb.strucFac(it, ig).real() * exp(-0.5 *gg*(sigma_nc_k * sigma_nc_k)));
+                // N[ig].imag(N[ig].imag() + get_Z(cell.atoms[it].psd) * pwb.strucFac(it, ig).imag() * exp(-0.5 *gg*(sigma_nc_k * sigma_nc_k)));
+                N[ig] = N[ig] + cell.atoms[it].zv * pwb.strucFac(it, ig) * exp(-0.5 *gg*(sigma_nc_k * sigma_nc_k));
             }
+            if(flag == 3)    // pseudo core
+            {
+                N[ig].real(N[ig].real()+(get_Z(cell.atoms[it].psd)-cell.atoms[it].zv) * pwb.strucFac(it, ig).real() * exp(-0.5*gg*(sigma_rc_k*sigma_rc_k))); 
+                N[ig].imag(N[ig].imag()+(get_Z(cell.atoms[it].psd)-cell.atoms[it].zv) * pwb.strucFac(it, ig).imag() * exp(-0.5*gg*(sigma_rc_k*sigma_rc_k))); 
+                // N[ig] /= cell.omega;
+            }
+        }
             // cout<<"test getZ"<<endl;
             // cout<<get_Z(cell.atoms[it].psd)<<endl;
             // cout<<cell.atoms[it].zv<<endl;
- 		}
+ 		// }
+    }
+    for(int ig=0; ig<pwb.ngmc; ig++)
+    {
+        N[ig] /= cell.omega;
     }
 }
 
-int H_Hartree_pw::get_Z(string atom_type)
+int H_Hartree_pw::get_Z(string str)
 {
-<<<<<<< HEAD
+    assert(str=="H"||str=="O");
     if(str == "H") 
     {
         return 1;
@@ -273,37 +308,6 @@ int H_Hartree_pw::get_Z(string atom_type)
         return 8;
     }
     else return 1;
-=======
-	map<string, string> data;
-
-    ifstream fin("periodtable.txt");//filename.c_str()
-	if (!fin)
-	{
-		cerr<<"input file does not exist"<<endl;
-		return 0;
-	}
-	while(!fin.eof())
-	{
-		string str;
-		getline(fin,str);
-	
-		int pos=str.find(":");
-		string key=str.substr(0,pos);
-		string value=str.substr(pos+1,str.length());
-		data[key]=value;
-		if (!fin.good())
-			break;
-	}
-	
-	map<string,string>::iterator iter=data.find("atom_type");
-	
-	if (iter==data.end())
-	{
-		return 0;
-	}
-	return iter->second;
-		
->>>>>>> 61ebda297f681fbf6e1ea535b66d39c5ac6a56bf
 }
 
 //
@@ -315,32 +319,23 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
 {				
     ModuleBase::TITLE("H_Hartree_pw","v_correction");
     ModuleBase::timer::tick("H_Hartree_pw","v_correction");	
-    // Porter in real space	
-    // Get sum on nspin axis .	
-    complex<double> *Porter = new complex<double>[pwb.nrxx];
+
+    double *Porter = new double[pwb.nrxx];
+    for(int i=0; i<pwb.nrxx; i++) Porter[i] = 0.0;
     const int nspin0 = (nspin==2) ? 2 : 1;
     for(int is=0; is<nspin0; is++)
         for (int ir=0; ir<pwb.nrxx; ir++) 
-            Porter[ir] += std::complex<double>( rho[is][ir], 0.0 );
+            Porter[ir] += rho[is][ir];
     
     cout<< "*********** abacus origin: ***********"<<endl;
     test_tot_rho(Porter, pwb.nrxx, cell.omega);
-    
-    // into G space (nrxx)
-    pwb.FFT_chg.FFT3D(Porter, -1);
 
-    // Build Porter_g in G space. (dim = ngmc)
+    // test_print(Porter, 100);
+
     complex<double> *Porter_g = new complex<double>[pwb.ngmc];
     ModuleBase::GlobalFunc::ZEROS( Porter_g, pwb.ngmc);
-    for (int ig = pwb.gstart; ig<pwb.ngmc; ig++)
-    {
-        const int j = pwb.ig2fftc[ig];
-        if(pwb.gg[ig] >= 1.0e-12) //LiuXh 20180410
-        {
-            Porter_g[ig] = Porter[j];
-        }
-    }
-    // delete Porter in real space
+    GlobalC::UFFT.ToReciSpace(Porter, Porter_g);
+    
     delete [] Porter;
 
     cout<< "*********** Porter G (origin): ***********"<<endl;
@@ -352,19 +347,28 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     complex<double> *TOTN = new complex<double>[pwb.ngmc];
     complex<double> *PS_TOTN = new complex<double>[pwb.ngmc];
 
+    ModuleBase::GlobalFunc::ZEROS( N, pwb.ngmc);
+    ModuleBase::GlobalFunc::ZEROS( TOTN, pwb.ngmc);
+    ModuleBase::GlobalFunc::ZEROS( PS_TOTN, pwb.ngmc);
     // N in G space
     gauss_charge(cell, pwb, N, 1); 
 
+    cout<<"cell.omega: "<<cell.omega<<endl;
+    printf("(%d, %d, %d) = %d\n", pwb.nx, pwb.ny, pwb.nz, pwb.nrxx);
     cout<< "*********** N (gauss param = 1): ***********"<<endl;
     test_tot_rho_G(N, pwb, cell.omega);
     
     // TOTN in G space
-    for(int ig=pwb.gstart; ig<pwb.ngmc; ig++)
+
+    cout<< "*********** Porter_g: ***********"<<endl;
+    test_tot_rho_G(Porter_g, pwb, cell.omega);
+    for(int ig=0; ig<pwb.ngmc; ig++)
     {
-		TOTN[ig] = N[ig] + Porter_g[ig] ;
+		TOTN[ig] = N[ig] - Porter_g[ig] ;
+        // TOTN[ig] = Porter_g[ig];
     }
 
-    cout<< "*********** TOTN (N + origin): ***********"<<endl;
+    cout<< "*********** TOTN (N - origin): ***********"<<endl;
     test_tot_rho_G(TOTN, pwb, cell.omega);
 
     // PS_TOTN(n_val+pseudo_core)
@@ -374,7 +378,7 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     test_tot_rho_G(N, pwb, cell.omega);
 
     // PS_TOTN in G space (ngmc)
-    for(int ig=pwb.gstart; ig<pwb.ngmc; ig++)
+    for(int ig=0; ig<pwb.ngmc; ig++)
     {
 		PS_TOTN[ig] = N[ig] + Porter_g[ig] ;
     }
@@ -384,7 +388,7 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
 
     // Build a nrxx vector to DO FFT .
     complex<double> *PS_TOTN_real = new complex<double>[pwb.nrxx];
-    for(int ig=pwb.gstart; ig<pwb.ngmc; ig++)
+    for(int ig=0; ig<pwb.ngmc; ig++)
     {
         PS_TOTN_real[pwb.ig2fftc[ig]] = PS_TOTN[ig];
     }
@@ -397,11 +401,8 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     // shapefunction value varies from 0 in the solute to 1 in the solvent
     // epsilon = 1.0 + (eb_k - 1) * shape function
 
-<<<<<<< HEAD
     double nc_k = 0.00037; //ang^-3
     double sigma_k = 0.6 ;
-=======
->>>>>>> 61ebda297f681fbf6e1ea535b66d39c5ac6a56bf
 
     // build epsilon in real space (nrxx)
     double *epsilon = new double[pwb.nrxx];
@@ -419,14 +420,6 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     // test_print(epsilon+50000, 10000);
 
     delete [] PS_TOTN_real;
-
-    // fill in epsilon with ones (Used to test)
-    // for(int i=0; i<pwb.nrxx; i++)
-    // {
-    //     epsilon[i] = 1.0;
-    // }
-
-    // test_print(epsilon+50000, 100);
 
     complex<double> *Sol_phi = new complex<double>[pwb.ngmc];
     int ncgsol = 0;
@@ -825,7 +818,7 @@ void H_Hartree_pw::Leps(
     }
 }
 
-
+/*
 void H_Hartree_pw::createcavity(
     const UnitCell &ucell,
     PW_Basis &pwb,
@@ -1018,3 +1011,4 @@ void H_Hartree_pw::shape_gradn( const complex<double> *PS_TOTN ,
     
 }
 
+*/

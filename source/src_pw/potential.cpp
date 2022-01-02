@@ -132,11 +132,13 @@ void Potential::init_pot(
         std::cout << " START POTENTIAL      : " << start_pot << std::endl;
         if (this->start_pot == "atomic")//mohan add 2007-10-17
         {
+			cout<<"atomic"<<endl;
             start_from_atomic:
             GlobalC::CHR.atomic_rho(GlobalV::NSPIN, GlobalC::CHR.rho);
         }
         else if (this->start_pot == "file")
         {
+			cout<<"no atomic"<<endl;
             GlobalV::ofs_running << " try to start potential from file : ";
             for(int is=0; is<GlobalV::NSPIN; is++)
             {
