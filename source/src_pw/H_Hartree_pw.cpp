@@ -80,6 +80,19 @@ void test_tot_rho_G(complex<double> *rho_G, PW_Basis &pwb, double omega)
 
 }
 
+void test_phi_R(complex<double>*phi_G, 
+    int x, int y, int z, 
+    int x0, int y0, int z0,
+    PW_Basis &pwb)
+{
+    double *phi_R = new double[pwb.nrxx];
+    GlobalC::UFFT.ToRealSpace(phi_G, phi_R);
+    int idx = x * pwb.ny * pwb.nz + y * pwb.nz + z;
+    int idx0 = x0 * pwb.ny * pwb.nz + y0 * pwb.nz + z0;
+    cout<<"/////////////  test rho R /////////"<<endl;
+    printf("test phi on position (%d, %d, %d): %.6f\n", x, y, z, fabs(phi_R[idx]-phi_R[idx0]));
+}
+
 void H_Hartree_pw::test_res(const UnitCell &ucell,
     PW_Basis &pwb,
     const complex<double>* tot_N,
@@ -260,6 +273,9 @@ void H_Hartree_pw::gauss_charge(const UnitCell &cell, PW_Basis &pwb, complex<dou
         //cout<<"na:"<<cell.atoms[it].na<<endl;
         // for (int ia=0; ia<cell.atoms[it].na; ia++)
 		// {
+        // cell.atoms[it].tau->print();
+        // cell.atoms[it].taud->print();
+        // cell.atoms[it].vel->print();
         for(int ig=0; ig<pwb.ngmc; ig++)  // ngmc : num. of G vectors within ggchg in each proc.
         {
             //G^2
@@ -303,7 +319,7 @@ void H_Hartree_pw::gauss_charge(const UnitCell &cell, PW_Basis &pwb, complex<dou
 
 int H_Hartree_pw::get_Z(string str)
 {
-    assert(str=="H"||str=="O");
+    // assert(str=="H"||str=="O");
     if(str == "H") 
     {
         return 1;
@@ -414,7 +430,22 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     {
 	    shapefunc[i] = erfc((log(max(PS_TOTN_real[i].real(), 1e-10) / nc_k)) / sqrt(2.0) / sigma_k ) / 2;
 		epsilon[i] = 1 + (eb_k - 1) * shapefunc[i];
+        // epsilon[i] = 1.0;
 	}
+    // ofstream ofs;
+    // ofs.open("./epsilon_on_z.xls");
+    // for(int i=0; i<pwb.nx; i++)
+    // {
+    //     for(int j=0;j<pwb.nx;j++)
+    //     {
+    //         ofs<<epsilon[i*pwb.nx+j]<<" ";
+    //     }    
+    //     ofs<<endl;
+    // }
+
+    // ofs.close();
+    // int pp;
+    // cin >>pp;
 
     // cout<<"build shapefunc"<<endl;
     // test_print(shapefunc, 15);
@@ -438,7 +469,7 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     double *Vel = new double[pwb.nrxx];
     ModuleBase::GlobalFunc::ZEROS( Vel, pwb.nrxx);
     double Ael = 0;
-    double *lapn=new double[pwb.nrxx];
+    double *lapn = new double[pwb.nrxx];
 
    
     createcavity(cell, pwb, PS_TOTN, Vcav, Acav);
@@ -455,9 +486,11 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     delete [] N;
     delete [] PS_TOTN;
     delete [] TOTN;
-    // delete [] r_work;
     delete [] epsilon;
     delete [] shapefunc;
+    delete [] Vcav;
+    delete [] Vel;
+    delete [] lapn;
 
     ModuleBase::timer::tick("H_Hartree_pw","v_correction");	
     return v;
@@ -848,8 +881,6 @@ void H_Hartree_pw::createcavity(
     double &Acav
 )
 {
-
-    
     ModuleBase::Vector3<double> *nablan =new ModuleBase::Vector3 <double> [pwb.nrxx];
     ModuleBase::GlobalFunc::ZEROS( nablan, pwb.nrxx);
     double *nablan_2 = new double[pwb.nrxx];
@@ -889,7 +920,7 @@ void H_Hartree_pw::createcavity(
     //term1 = gamma*A / n, where
     //gamma * A = exp(-(log(n/n_c))^2 /(2 sigma^2)) /(sigma * sqrt(2*pi) )
     //-------------------------------------------------------------
-    double *term1 = new double[pwb.ngmc];
+    double *term1 = new double[pwb.nrxx];
     shape_gradn(PS_TOTN , pwb, term1) ;
    
     //-------------------------------------------------------------
@@ -940,8 +971,14 @@ void H_Hartree_pw::createcavity(
     }
     */
 
-
-
+   delete [] nablan;
+   delete [] nablan_2;
+   delete [] sqrt_nablan_2;
+   delete [] lapn;
+   delete [] term1;
+   delete [] inv_gn;
+   delete [] ggn;
+ 
 }
 
 
@@ -1018,6 +1055,8 @@ void H_Hartree_pw::shape_gradn( const complex<double> *PS_TOTN ,
         epr_z = log(PS_TOTN_real[ir].real()/nc_k)/sqrt(2)/sigma_k ;
         eprime[ir] = epr_c*exp(-pow(epr_z,2))/PS_TOTN_real[ir].real() ;
     }
+
+    delete [] PS_TOTN_real;
     
 }
 
@@ -1055,6 +1094,10 @@ void H_Hartree_pw::eps_pot( const complex<double> *PS_TOTN ,
         vwork[ir] =eprime[ir]*phisq[ir] ;
         Ael = Ael - phisq[ir] * d_eps[ir] ;
     }
+
+    delete [] eprime;
+    delete [] nabla_phi;
+    delete [] phisq;
 
     /*
     //  to G space
