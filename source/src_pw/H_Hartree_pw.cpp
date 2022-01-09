@@ -3,7 +3,7 @@
 #include "diago_cg.h"
 #include "global.h"
 #include <cmath>
-#define eb_k 80
+#define eb_k 80.0
 #define EDEPS 1.0
 #define ediffsol 1e-3
 #define tau 0.1470
@@ -297,7 +297,7 @@ void H_Hartree_pw::gauss_charge(const UnitCell &cell, PW_Basis &pwb, complex<dou
                 //need Z(proton num.) 
                 // N[ig].real(N[ig].real() + get_Z(cell.atoms[it].psd) * pwb.strucFac(it, ig).real() * exp(-0.5 *gg*(sigma_nc_k * sigma_nc_k)));
                 // N[ig].imag(N[ig].imag() + get_Z(cell.atoms[it].psd) * pwb.strucFac(it, ig).imag() * exp(-0.5 *gg*(sigma_nc_k * sigma_nc_k)));
-                N[ig] = N[ig] + cell.atoms[it].zv * pwb.strucFac(it, ig) * exp(-0.5 *gg*(sigma_nc_k * sigma_nc_k));
+                N[ig] = N[ig] + (double)cell.atoms[it].zv * pwb.strucFac(it, ig) * exp(-0.5 *gg*(sigma_nc_k * sigma_nc_k));
             }
             if(flag == 3)    // pseudo core
             {
