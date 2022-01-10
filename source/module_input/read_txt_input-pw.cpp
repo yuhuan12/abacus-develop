@@ -15,7 +15,7 @@ namespace Read_Txt_Input
 {
 	void Input_List::set_items_pw()
 	{
-		this->output_labels.push_back("Parameters (2.Pw)");
+		this->output_labels.push_back("Parameters (03.Plane Wave part)");
 
 		/*{
 			Input_Item item("ecutwfc");
