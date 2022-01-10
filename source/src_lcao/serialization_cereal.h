@@ -12,8 +12,8 @@
 #include "../module_base/vector3.h"
 #include "../src_ri/abfs-vector3_order.h"
 #include "../module_base/matrix.h"
-#include "src_io/read_txt_input_value.h"
-#include "src_io/read_txt_input_item.h"
+#include "../module_input/read_txt_input_value.h"
+#include "../module_input/read_txt_input_item.h"
 
 
 

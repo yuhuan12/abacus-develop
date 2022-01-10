@@ -5,18 +5,18 @@
 
 #include "read_txt_input_list.h"
 
-#include "src_io/read_txt_tools.h"
+#include "read_txt_tools.h"
 #include <stdexcept>
 
 // for convert
-#include "module_base/global_variable.h"
-#include "src_pw/global.h"
+#include "../module_base/global_variable.h"
+#include "../src_pw/global.h"
 
 namespace Read_Txt_Input
 {
 	void Input_List::set_items_general()
 	{
-		this->output_labels.push_back("Parameters (1.General)");
+		this->output_labels.push_back("Parameters (01.General)");
 
 		/*{	// LDA ; LSDA ; non-linear spin
 			Input_Item item("nspin");

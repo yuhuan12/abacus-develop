@@ -219,7 +219,7 @@ function(AddTest)
   #dependencies & link library
   get_target_property(ABACUS_LINK_LIBRARIES ${ABACUS_BIN_NAME} LINK_LIBRARIES)
   target_link_libraries(${UT_TARGET} ${UT_LIBS} ${ABACUS_LINK_LIBRARIES}
-    base cell symmetry md symmetry
+    base cell symmetry md input
     neighbor orb io ions lcao parallel mrrr pdiag pw ri driver
     pthread gtest_main)
   install(TARGETS ${UT_TARGET} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/../../../tests )
@@ -236,9 +236,9 @@ target_link_libraries(${ABACUS_BIN_NAME}
     cell
     symmetry
     md
-    symmetry
     neighbor
     orb
+    input
     io
     ions
     lcao
