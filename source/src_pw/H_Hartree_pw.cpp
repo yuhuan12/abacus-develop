@@ -339,6 +339,22 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     // fake v
     ModuleBase::matrix v(nspin, pwb.nrxx);
 
+    ModuleBase::matrix v_fake(nspin, pwb.nrxx);
+
+    if (nspin == 4) {
+        for (int ir = 0; ir < pwb.nrxx; ir++) {
+            v(0, ir) += Vcav[ir];
+            v(0, ir) += Vel[ir];
+        }
+    } else {
+        for (int is = 0; is < nspin; is++) {
+            for (int ir = 0; ir < pwb.nrxx; ir++) {
+                v(is, ir) += Vcav[ir];
+                v(is, ir) += Vel[ir];
+            }
+        }
+    }
+
     delete[] Porter_g;
     delete[] Sol_phi;
     delete[] N;
@@ -351,7 +367,7 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     delete[] lapn;
 
     ModuleBase::timer::tick("H_Hartree_pw", "v_correction");
-    return v;
+    return v_fake;
 }
 
 // cast complex to real
@@ -859,7 +875,6 @@ void H_Hartree_pw::eps_pot(const complex<double> *PS_TOTN,
 
     ModuleBase::Vector3<double> *nabla_phi =
         new ModuleBase::Vector3<double>[pw.nrxx];
-    ;
     double *phisq = new double[pw.nrxx];
 
     // nabla phi
