@@ -27,4 +27,6 @@ add_library(
     read_txt_input-spectrum.cpp
 )
 
-
+IF (BUILD_TESTING)
+  add_subdirectory(test)
+endif()
