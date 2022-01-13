@@ -21,12 +21,20 @@ public:
         lcao_ecut = 0.0;
     };
     ~LCAO_parameters(){};
+
+    /// 2d distribution of atoms
     int nb2d;
+    /// maximum of l channels used
     int lmaxmax;
-    double lcao_dk;
-    double lcao_dr;
-    double lcao_rmax;
+    /// energy cutoff for LCAO
     double lcao_ecut;
+    /// delta k for 1D integration in LCAO
+    double lcao_dk;
+    /// delta r for 1D integration in LCAO
+    double lcao_dr;
+    /// max R for 1D two-center integration table
+    double lcao_rmax;
+    /// gamma only, only used in LCAO basis
     bool gamma_only;
     ///
     /// big mesh ball
