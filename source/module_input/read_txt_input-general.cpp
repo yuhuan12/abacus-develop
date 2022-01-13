@@ -32,9 +32,9 @@ namespace Read_Txt_Input
 				GlobalV::NSPIN = self.values[0].geti();
 			};
 			this->add_item(item);
-		}*/
+		}
 
-		/*{	// number of atom types
+		{	// number of atom types
 			Input_Item item("ntype");
 			item.default_1(0);
 			item.annotation = "atom species number";
@@ -48,9 +48,9 @@ namespace Read_Txt_Input
 				GlobalC::ucell.ntype = self.values[0].geti();
 			};
 			this->add_item(item);
-		}*/
+		}
 
-		/*{	// turn on symmetry or not
+		{	// turn on symmetry or not
 			Input_Item item("symmetry");
 			item.default_1(false);
 			item.annotation = "turn symmetry on or off";
