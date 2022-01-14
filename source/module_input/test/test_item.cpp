@@ -10,7 +10,7 @@ protected:
 
     void SetUp()
     {
-
+        generate_input();
         Read_Txt_Input::Input_List input_list;
         input_list.set_items();
         Read_Txt_Input::Input_Process input_process(input_list);
@@ -24,6 +24,18 @@ protected:
 		Read_Txt_Input::Input_Process input_process(input_list);
 		input_process.read_and_convert(input_name);
 	}
+
+    void generate_input()
+    {
+        std::ofstream in("INPUT");
+        in<<"mixing_beta 0.5"<<std::endl;
+        in<<"ecut 71.80 Ry"<<std::endl;
+        in<<"scf_thr 3.5e-6"<<std::endl;
+        //in<<""<<std::endl;
+        //in<<""<<std::endl;
+
+        in.close();
+    }
 
     void TearDown()
     {
