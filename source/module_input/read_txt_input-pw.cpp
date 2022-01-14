@@ -9,7 +9,7 @@
 #include <stdexcept>
 
 // for convert
-#include "module_base/global_variable.h"
+#include "../abacus_parameters.h"
 
 namespace Read_Txt_Input
 {
@@ -17,8 +17,8 @@ namespace Read_Txt_Input
 	{
 		this->output_labels.push_back("Parameters (03.Plane Wave part)");
 
-		/*{
-			Input_Item item("ecutwfc");
+		{
+			Input_Item item("ecut");
 			item.default_1(100.0,"Ry");
 			item.check_values_size(1,2);
 			item.annotation = "energy cutoff for wave functions";
@@ -36,9 +36,10 @@ namespace Read_Txt_Input
 			};
 			item.convert = [](const Input_Item &self)
 			{
-				// ?? GlobalC::pw.set()
+				ABACUS::para.pwp.ecut[0] = self.values[0].getd();
+				
 			};
 			this->add_item(item);
-		}*/
+		}
 	}
 }

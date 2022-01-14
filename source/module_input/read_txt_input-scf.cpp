@@ -30,6 +30,7 @@ namespace Read_Txt_Input
 			item.convert = [](const Input_Item &self)
 			{
 				GlobalV::DRHO2 = self.values[0].getd();
+				ABACUS::para.scfp.scf_thr = self.values[0].getd();
 			};
 			this->add_item(item);
 		}
