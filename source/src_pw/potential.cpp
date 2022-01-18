@@ -259,6 +259,7 @@ void Potential::set_local_pot(
 	ModuleBase::ComplexMatrix &sf // structure factors	
 )const
 {
+	cout<<"set local pot"<<endl;
     ModuleBase::TITLE("Potential","set_local_pot");
     ModuleBase::timer::tick("Potential","set_local_pot");
 
@@ -275,6 +276,11 @@ void Potential::set_local_pot(
     }
 
     GlobalC::UFFT.ToRealSpace(vg, vl_pseudo); 
+
+	for(int i=0;i<10;i++)
+	{
+		cout<<vl_pseudo[i]<<endl;
+	}
 
     delete[] vg;
 

@@ -5,8 +5,8 @@
 #include <cmath>
 #define eb_k 80.0
 #define EDEPS 1.0
-#define ediffsol 1e-3
-#define tau 0.1470
+#define ediffsol 1e-5
+#define tau 1.0798 * 1e-5
 #define sigma_k 0.6
 #define nc_k 0.00037
 
@@ -22,6 +22,13 @@ void test_print(double *data, int size) {
 void test_print(complex<double> *data, int size) {
     for (int i = 0; i < size; i++) {
         cout << data[i].real() << " " << data[i].imag() << endl;
+    }
+    return;
+}
+
+void test_print_real(complex<double> *data, int size) {
+    for (int i = 0; i < size; i++) {
+        cout << data[i].real() << endl;
     }
     return;
 }
@@ -155,12 +162,13 @@ ModuleBase::matrix H_Hartree_pw::v_hartree(const UnitCell &cell, PW_Basis &pwb,
 
             ehart += (conj(Porter[j]) * Porter[j]).real() * fac;
             vh_g[ig] = fac * Porter[j];
-            // if(ig<10)
-            // {
-            //     cout<<Porter[j].real()<<" "<<Porter[j].imag()<<endl;
-            // }
         }
     }
+
+    // cout << "vh_g:" << endl;
+    // for (int i = 0; i < 10; i++) {
+    //     cout << vh_g[i].real() << endl;
+    // }
 
     Parallel_Reduce::reduce_double_pool(ehart);
     ehart *= 0.5 * cell.omega;
@@ -174,6 +182,13 @@ ModuleBase::matrix H_Hartree_pw::v_hartree(const UnitCell &cell, PW_Basis &pwb,
     // transform hartree potential to real space
     //==========================================
     pwb.FFT_chg.FFT3D(Porter.data(), 1);
+
+    cout << "v hartree:" << endl;
+    // for (int i = 24 * 48 * 48 + 24 * 48 + 24;
+    //      i < 24 * 48 * 48 + 24 * 48 + 24 + 10; i++) {
+    for (int i = 0; i < 10; i++) {
+        cout << Porter[i].real() << endl;
+    }
 
     //==========================================
     // Add hartree potential to the xc potential
@@ -202,8 +217,8 @@ ModuleBase::matrix H_Hartree_pw::v_hartree(const UnitCell &cell, PW_Basis &pwb,
 
 void H_Hartree_pw::gauss_charge(const UnitCell &cell, PW_Basis &pwb,
                                 complex<double> *N, const int flag) {
-    const double delta_grd = pow(cell.omega / pwb.nrxx, 1.0 / 3); // unit bohr??
-    const double sigma_nc_k = 1.6 * delta_grd;
+    // const double delta_grd = pow(cell.omega / pwb.nrxx, 1.0 / 3); // unit
+    // bohr?? const double sigma_nc_k = 1.6 * delta_grd;
 
     ModuleBase::GlobalFunc::ZEROS(N, pwb.ngmc);
     // complex<double> *N = new complex<double>[pwb.ngmc] ;
@@ -212,12 +227,13 @@ void H_Hartree_pw::gauss_charge(const UnitCell &cell, PW_Basis &pwb,
     for (int it = 0; it < cell.ntype; it++) {
         double RCS = cell.atoms[it].r[cell.atoms[it].mesh - 1];
         double sigma_rc_k = RCS / 2.5;
+        double sigma_nc_k = RCS / 10.0;
         for (int ig = 0; ig < pwb.ngmc;
              ig++) // ngmc : num. of G vectors within ggchg in each proc.
         {
             // G^2
             double gg = pwb.get_NormG_cartesian(ig);
-            gg = gg * cell.tpiba2;
+            // gg = gg * cell.tpiba2;
             if (flag == 1) {
                 N[ig] = N[ig] + (double)cell.atoms[it].zv *
                                     pwb.strucFac(it, ig) *
@@ -269,11 +285,32 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
         for (int ir = 0; ir < pwb.nrxx; ir++)
             Porter[ir] += rho[is][ir];
 
+    cout<<"rho_in from abacus"<<endl;
+    test_tot_rho(Porter, pwb.nrxx, cell.omega);
+
     complex<double> *Porter_g = new complex<double>[pwb.ngmc];
     ModuleBase::GlobalFunc::ZEROS(Porter_g, pwb.ngmc);
+
     GlobalC::UFFT.ToReciSpace(Porter, Porter_g);
 
-    delete[] Porter;
+    cout<<"Porter_g, n_valence"<<endl;
+    test_tot_rho_G(Porter_g, pwb, cell.omega);
+
+/* compare v_hartree & n_valence / G^2
+    complex<double> *Porter_g_tmp = new complex<double>[pwb.ngmc];
+    ModuleBase::GlobalFunc::ZEROS(Porter_g_tmp, pwb.ngmc);
+    for (int ig = pwb.gstart; ig < pwb.ngmc; ig++) {
+        double gg = pwb.get_NormG_cartesian(ig);
+        gg *= cell.tpiba2;
+        Porter_g_tmp[ig] = Porter_g[ig] / gg;
+    }
+    ModuleBase::GlobalFunc::ZEROS(Porter, pwb.nrxx);
+    GlobalC::UFFT.ToRealSpace(Porter_g_tmp, Porter);
+    cout << "n(val)/G^2 * (-4π)" << endl;
+    for (int i = 0; i < 10; i++) {
+        cout << Porter[i] * (-4 * 3.14159265359) << endl;
+    }
+*/
     // From now, Porter_g is in G space (dim=ngmc)
     // TOTN(n_val+N_gauss)
     complex<double> *N = new complex<double>[pwb.ngmc];
@@ -284,19 +321,65 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     ModuleBase::GlobalFunc::ZEROS(TOTN, pwb.ngmc);
     ModuleBase::GlobalFunc::ZEROS(PS_TOTN, pwb.ngmc);
     // N in G space
-    gauss_charge(cell, pwb, N, 1);
+    // gauss_charge(cell, pwb, N, 1);
+
+    // use laplace vloc to N..
+    GlobalC::UFFT.ToReciSpace(GlobalC::pot.vltot, N); // now n is vloc in Recispace
+
+    double* lapl_N = new double[pwb.nrxx];
+    lapl_rho(N, lapl_N);
+
+    cout<<"lap(vloc)"<<endl;
+    for(int i=0;i<10;i++)
+    {
+        cout<<lapl_N[i]<<endl;
+    }
+
+    ModuleBase::GlobalFunc::ZEROS(N, pwb.ngmc);
+    GlobalC::UFFT.ToReciSpace(lapl_N, N); // now n is laplace vloc in Recispace
+
+    // Ry to Hartree
+    for(int ig=0; ig<pwb.ngmc; ig++)
+    {
+        N[ig] /= 2.0;
+    }
+
+    cout<<"N nuclear before assign N[0]"<<endl;
+    test_tot_rho_G(N, pwb, cell.omega);
+
+    N[0] = Porter_g[0]; // assign N[0] with Porter_g[0]
+
+    cout<<"N nuclear after assign N[0]"<<endl;
+    test_tot_rho_G(N, pwb, cell.omega);
+
+    cout << "n valence" << endl;
+    test_tot_rho_G(Porter_g, pwb, cell.omega);
 
     for (int ig = 0; ig < pwb.ngmc; ig++) {
         TOTN[ig] = N[ig] - Porter_g[ig];
-        // TOTN[ig] = Porter_g[ig];
+        // TOTN[ig] = TOTN[ig] * ModuleBase::TWO_PI * (-2);
     }
+
+    cout<<"TOTN(n_valence - n_nuclear)"<<endl;
+    test_tot_rho_G(TOTN, pwb, cell.omega);
     // PS_TOTN(n_val+pseudo_core)
+
+    for(int ig=0; ig<pwb.ngmc; ig++)
+    {
+        TOTN[ig] *= (-4.0 * ModuleBase::PI);
+    }
+
     gauss_charge(cell, pwb, N, 3);
+    cout<<"gauss N (flag = 3)"<<endl;
+    test_tot_rho_G(N, pwb, cell.omega);
 
     // PS_TOTN in G space (ngmc)
     for (int ig = 0; ig < pwb.ngmc; ig++) {
         PS_TOTN[ig] = N[ig] + Porter_g[ig];
     }
+    cout<<"PS_TOTN (N + n)"<<endl;
+    test_tot_rho_G(PS_TOTN, pwb, cell.omega);
+
     // Build a nrxx vector to DO FFT .
     complex<double> *PS_TOTN_real = new complex<double>[pwb.nrxx];
     for (int ig = 0; ig < pwb.ngmc; ig++) {
@@ -315,10 +398,8 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
                             sqrt(2.0) / sigma_k) /
                        2;
         epsilon[i] = 1 + (eb_k - 1) * shapefunc[i];
-        // epsilon[i] = 1.0;
+        epsilon[i] = 1.0; // set epsilon = 0 debug
     }
-
-    delete[] PS_TOTN_real;
 
     complex<double> *Sol_phi = new complex<double>[pwb.ngmc];
     int ncgsol = 0;
@@ -326,19 +407,31 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     double *Vcav = new double[pwb.nrxx];
     ModuleBase::GlobalFunc::ZEROS(Vcav, pwb.nrxx);
     double Acav = 0;
+
     double *Vel = new double[pwb.nrxx];
     ModuleBase::GlobalFunc::ZEROS(Vel, pwb.nrxx);
     double Ael = 0;
+
     double *lapn = new double[pwb.nrxx];
+    ModuleBase::GlobalFunc::ZEROS(lapn, pwb.nrxx);
 
     createcavity(cell, pwb, PS_TOTN, Vcav, Acav);
 
     minimize(cell, pwb, epsilon, TOTN, Sol_phi, ncgsol);
+
     eps_pot(PS_TOTN, Sol_phi, pwb, epsilon, Vel, Ael);
 
-    // fake v
-    ModuleBase::matrix v(nspin, pwb.nrxx);
+    cout << "Ael: " << Ael << endl;
+    cout << "Acav: " << Acav << endl;
 
+    // debug pause..
+    int pp;
+    cin >> pp;
+
+    // fake v corr
+    ModuleBase::matrix v(nspin, pwb.nrxx);
+    
+    // real v corr
     ModuleBase::matrix v_fake(nspin, pwb.nrxx);
 
     if (nspin == 4) {
@@ -355,6 +448,8 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
         }
     }
 
+    delete[] PS_TOTN_real;
+    delete[] Porter;
     delete[] Porter_g;
     delete[] Sol_phi;
     delete[] N;
@@ -367,7 +462,7 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     delete[] lapn;
 
     ModuleBase::timer::tick("H_Hartree_pw", "v_correction");
-    return v_fake;
+    return v;
 }
 
 // cast complex to real
@@ -396,6 +491,7 @@ void H_Hartree_pw::minimize(const UnitCell &ucell, PW_Basis &pwb,
     double r2 = 0;
     // precond loop parameter
     int i = 0;
+    ModuleBase::GlobalFunc::ZEROS(phi, pwb.ngmc);
     // malloc vectors in G space
     complex<double> *resid = new complex<double>[pwb.ngmc];
     complex<double> *z = new complex<double>[pwb.ngmc];
@@ -409,6 +505,18 @@ void H_Hartree_pw::minimize(const UnitCell &ucell, PW_Basis &pwb,
 
     complex<double> *phi_work = new complex<double>[pwb.ngmc];
 
+    ModuleBase::GlobalFunc::ZEROS(resid, pwb.ngmc);
+    ModuleBase::GlobalFunc::ZEROS(z, pwb.ngmc);
+    ModuleBase::GlobalFunc::ZEROS(lp, pwb.ngmc);
+    ModuleBase::GlobalFunc::ZEROS(gsqu, pwb.ngmc);
+    ModuleBase::GlobalFunc::ZEROS(d, pwb.ngmc);
+
+    ModuleBase::GlobalFunc::ZEROS(gradphi_x, pwb.ngmc);
+    ModuleBase::GlobalFunc::ZEROS(gradphi_y, pwb.ngmc);
+    ModuleBase::GlobalFunc::ZEROS(gradphi_z, pwb.ngmc);
+
+    ModuleBase::GlobalFunc::ZEROS(phi_work, pwb.ngmc);
+
     int count = 0;
     double gg = 0;
 
@@ -419,50 +527,38 @@ void H_Hartree_pw::minimize(const UnitCell &ucell, PW_Basis &pwb,
         gsqu[ig].imag(0);
     }
 
-    // cout<<"precond"<<endl;
-    // test_print(gsqu, 10);
-
     // init guess for phi
     for (int ig = pwb.gstart; ig < pwb.ngmc; ig++) {
-        // sol_phi = ?
-        phi[ig].real(tot_N[ig].real() * gsqu[ig].real());
-        phi[ig].imag(tot_N[ig].imag() * gsqu[ig].real());
-
-        // phi[ig].real(0.0);
-        // phi[ig].imag(0.0);
+        phi[ig] = tot_N[ig] * gsqu[ig];
     }
 
-    // call leps to calculate div ( epsilon * grad ) phi - kappa^2 * phi
-    // cout <<"****phi before"<<endl;
-    // test_print(phi, 20);
+    complex<double> *phi_real_tmp = new complex<double>[pwb.nrxx];
+    ModuleBase::GlobalFunc::ZEROS(phi_real_tmp, pwb.nrxx);
+    for (int ig = 0; ig < pwb.ngmc; ig++) {
+        phi_real_tmp[pwb.ig2fftc[ig]] = phi[ig];
+    }
+
+    pwb.FFT_chg.FFT3D(phi_real_tmp, 1);
+    cout << "========real space phi before CG(Initial Guess with totn / G^2)=======" << endl;
+    test_print(phi_real_tmp, 10);
+    delete[] phi_real_tmp;
+
+    // call leps to calculate div ( epsilon * grad ) phi 
     Leps(ucell, pwb, phi, d_eps, gradphi_x, gradphi_y, gradphi_z, phi_work, lp);
-
-    // int c;
-    // cin >>c;
-
-    // cout <<"****phi after"<<endl;
-    // test_print(phi, 10);
-    // calculate Lp: pwb.ngmc, complex-double
 
     // the residue
     // r = A*phi + (chtot + N)
-    // pwb.ngmc = ?
     for (int ig = pwb.gstart; ig < pwb.ngmc; ig++) {
         // resid[ig].real(lp[ig].real() + tot_N[ig].real());
         // resid[ig].imag(lp[ig].imag() + tot_N[ig].imag());
         resid[ig] = lp[ig] + tot_N[ig];
     }
 
-    // cout << "-------resid now-----------"<<endl;
-    // test_print(resid, 10);
-    // precondition of the residue, z = invLr
     for (int ig = pwb.gstart; ig < pwb.ngmc; ig++) {
         z[ig].real(gsqu[ig].real() * resid[ig].real());
         z[ig].imag(gsqu[ig].real() * resid[ig].imag());
     }
     // calculate r*r'
-    // where ddot_real()
-    // Diago_CG::ddot_real( npw, respsi, respsi );
     rinvLr = Diago_CG::ddot_real(pwb.ngmc, resid, z);
     r2 = Diago_CG::ddot_real(pwb.ngmc, resid, resid);
 
@@ -470,15 +566,10 @@ void H_Hartree_pw::minimize(const UnitCell &ucell, PW_Basis &pwb,
 
     // copy
     for (int ig = pwb.gstart; ig < pwb.ngmc; ig++) {
-        // d[ig].real(z[ig].real());
-        // d[ig].imag(z[ig].imag());
         d[ig] = z[ig];
     }
 
     // CG Loop
-    // cout << "r2: " << r2 << endl;
-    // cout << "sqrt(r2): " << sqrt(r2) << endl;
-    // cout << "sqrt(rinvLr): " << sqrt(rinvLr) << endl;
     while (count < 20000 && sqrt(r2) > ediffsol && sqrt(rinvLr) > 1e-10) {
         if (sqrt(r2) > 1e6) {
             cout << "CG ERROR!!!" << endl;
@@ -489,46 +580,29 @@ void H_Hartree_pw::minimize(const UnitCell &ucell, PW_Basis &pwb,
              lp);
 
         // cout <<"lp after leps"<<endl;
-        // test_print(lp, 10);
         // calculate alpha
         alpha = -rinvLr / Diago_CG::ddot_real(pwb.ngmc, d, lp);
-        //        cout<<"alpha: "<<alpha<<endl;
         // update phi
         for (int ig = pwb.gstart; ig < pwb.ngmc; ig++) {
-            // phi[ig].real() += alpha * d[ig].real();
-            // phi[ig].imag() += alpha * d[ig].imag();
             phi[ig] += alpha * d[ig];
         }
-        // update resid
 
-        // cout << "-------resid before update -----------"<<endl;
-        // test_print(resid, 10);
+        // update resid
         for (int ig = pwb.gstart; ig < pwb.ngmc; ig++) {
-            // resid[ig].real() += alpha * lp[ig].real();
-            // resid[ig].imag() += alpha * lp[ig].imag();
             resid[ig] += alpha * lp[ig];
         }
 
-        // cout << "-------resid after update -----------"<<endl;
-        // test_print(resid, 10);
         // precond one more time..
         for (int ig = pwb.gstart; ig < pwb.ngmc; ig++) {
-            // z[ig].real() = gsqu[ig].real() * resid[ig].real();
-            // z[ig].imag() = gsqu[ig].real() * resid[ig].imag();
             z[ig] = gsqu[ig] * resid[ig];
         }
 
-        /*        cout << "r2:" <<endl;
-                cout<< Diago_CG::ddot_real(pwb.ngmc, resid, resid)<<endl;
-        */
         // calculate beta
         beta = 1.0 / rinvLr;
         rinvLr = Diago_CG::ddot_real(pwb.ngmc, resid, z);
         beta *= rinvLr;
         // update d
         for (int ig = pwb.gstart; ig < pwb.ngmc; ig++) {
-            // d[ig].real() = beta * d[ig].real() + z[ig].real();
-            // d[ig].imag() = beta * d[ig].imag() + z[ig].imag();
             d[ig] = beta * d[ig] + z[ig];
         }
         r2 = 0;
@@ -538,16 +612,29 @@ void H_Hartree_pw::minimize(const UnitCell &ucell, PW_Basis &pwb,
         count++;
     } // end CG loop
 
+    cout << "testres 1" << endl;
+    test_res(ucell, pwb, tot_N, phi, d_eps);
+
     // output: num of cg loop
     ncgsol = count;
 
-    // TODO:
+    complex<double> *phi_real_tmp2 = new complex<double>[pwb.nrxx];
+    ModuleBase::GlobalFunc::ZEROS(phi_real_tmp2, pwb.nrxx);
     for (int ig = 0; ig < pwb.ngmc; ig++) {
-        // phi[ig].real() = phi[ig].real() * EDEPS / ucell.omega;
-        // phi[ig].imag() = phi[ig].imag() * EDEPS / ucell.omega;
+        phi_real_tmp2[pwb.ig2fftc[ig]] = phi[ig];
+    }
+    pwb.FFT_chg.FFT3D(phi_real_tmp2, 1);
+    cout << "========real space phi after CG=======" << endl;
+    test_print(phi_real_tmp2, 10);
+    delete[] phi_real_tmp2;
+
+    // divide by omega:
+    for (int ig = 0; ig < pwb.ngmc; ig++) {
         phi[ig] = phi[ig] * EDEPS / ucell.omega;
     }
-    // free
+
+    // cout << "testres 2" << endl;
+    // test_res(ucell, pwb, tot_N, phi, d_eps);
     delete[] resid;
     delete[] z;
     delete[] lp;
@@ -567,6 +654,9 @@ void H_Hartree_pw::Leps(const UnitCell &ucell, PW_Basis &pwb,
                         complex<double> *phi_work,
                         complex<double> *lp // output
 ) {
+    // gradphi_x = - 2πi * GX * phi
+    // gradphi_x = - 2πi * GY * phi
+    // gradphi_x = - 2πi * GY * phi
     for (int i = pwb.gstart; i < pwb.ngmc; i++) {
         gradphi_x[i].real(phi[i].imag() * pwb.gcar[i].x * ModuleBase::TWO_PI);
         gradphi_y[i].real(phi[i].imag() * pwb.gcar[i].y * ModuleBase::TWO_PI);
@@ -575,14 +665,6 @@ void H_Hartree_pw::Leps(const UnitCell &ucell, PW_Basis &pwb,
         gradphi_x[i].imag(-phi[i].real() * pwb.gcar[i].x * ModuleBase::TWO_PI);
         gradphi_y[i].imag(-phi[i].real() * pwb.gcar[i].y * ModuleBase::TWO_PI);
         gradphi_z[i].imag(-phi[i].real() * pwb.gcar[i].z * ModuleBase::TWO_PI);
-
-        // gradphi_x[i].real(phi[i].imag() * pwb.gcar[i].x * 1);
-        // gradphi_y[i].real(phi[i].imag() * pwb.gcar[i].y * 1);
-        // gradphi_z[i].real(phi[i].imag() * pwb.gcar[i].z * 1);
-
-        // gradphi_x[i].imag(-phi[i].real() * pwb.gcar[i].x * 1);
-        // gradphi_y[i].imag(-phi[i].real() * pwb.gcar[i].y * 1);
-        // gradphi_z[i].imag(-phi[i].real() * pwb.gcar[i].z * 1);
     }
     // build real space vectors todo FFT
     complex<double> *gradphi_x_real = new complex<double>[pwb.nrxx];
@@ -592,7 +674,14 @@ void H_Hartree_pw::Leps(const UnitCell &ucell, PW_Basis &pwb,
     complex<double> *phi_real = new complex<double>[pwb.nrxx];
     complex<double> *phi_work_real = new complex<double>[pwb.nrxx];
 
-    for (int ig = pwb.gstart; ig < pwb.ngmc; ig++) {
+    ModuleBase::GlobalFunc::ZEROS(gradphi_x_real, pwb.nrxx);
+    ModuleBase::GlobalFunc::ZEROS(gradphi_y_real, pwb.nrxx);
+    ModuleBase::GlobalFunc::ZEROS(gradphi_z_real, pwb.nrxx);
+
+    ModuleBase::GlobalFunc::ZEROS(phi_real, pwb.nrxx);
+    ModuleBase::GlobalFunc::ZEROS(phi_work_real, pwb.nrxx);
+
+    for (int ig = 0; ig < pwb.ngmc; ig++) {
         gradphi_x_real[pwb.ig2fftc[ig]] = gradphi_x[ig];
         gradphi_y_real[pwb.ig2fftc[ig]] = gradphi_y[ig];
         gradphi_z_real[pwb.ig2fftc[ig]] = gradphi_z[ig];
@@ -607,25 +696,14 @@ void H_Hartree_pw::Leps(const UnitCell &ucell, PW_Basis &pwb,
 
     pwb.FFT_chg.FFT3D(phi_real, 1);
 
-    // cout<<"epsilon"<<endl;
-    // test_print(epsilon, 10);
-
     // multiple grad x, y, z with epsilon in real space(nrxx)
     for (int j = 0; j < pwb.nrxx; j++) {
-        // gradphi_x_real[j].real(gradphi_x_real[j].real() * epsilon[2*j]);
-        // gradphi_y_real[j].real(gradphi_y_real[j].real() * epsilon[2*j]);
-        // gradphi_z_real[j].real(gradphi_z_real[j].real() * epsilon[2*j]);
-
-        // gradphi_x_real[j].imag(gradphi_x_real[j].imag() * epsilon[2*j+1]);
-        // gradphi_y_real[j].imag(gradphi_y_real[j].imag() * epsilon[2*j+1]);
-        // gradphi_z_real[j].imag(gradphi_z_real[j].imag() * epsilon[2*j+1]);
-
         // dim of epsilon = pwb.nrxx * 1 ! (complex mode)
         gradphi_x_real[j] *= epsilon[j];
         gradphi_y_real[j] *= epsilon[j];
         gradphi_z_real[j] *= epsilon[j];
 
-        phi_work_real[j] = phi_real[j] * eb_k;
+        // phi_work_real[j] = phi_real[j] * eb_k;
     }
 
     // FFT inverse
@@ -633,15 +711,20 @@ void H_Hartree_pw::Leps(const UnitCell &ucell, PW_Basis &pwb,
     pwb.FFT_chg.FFT3D(gradphi_y_real, -1);
     pwb.FFT_chg.FFT3D(gradphi_z_real, -1);
 
-    pwb.FFT_chg.FFT3D(phi_work_real, -1);
+    // pwb.FFT_chg.FFT3D(phi_work_real, -1);
     pwb.FFT_chg.FFT3D(phi_real, -1);
+
+    ModuleBase::GlobalFunc::ZEROS(gradphi_x, pwb.ngmc);
+    ModuleBase::GlobalFunc::ZEROS(gradphi_y, pwb.ngmc);
+    ModuleBase::GlobalFunc::ZEROS(gradphi_z, pwb.ngmc);
+    ModuleBase::GlobalFunc::ZEROS(phi, pwb.ngmc);
 
     for (int ig = pwb.gstart; ig < pwb.ngmc; ig++) {
         gradphi_x[ig] = gradphi_x_real[pwb.ig2fftc[ig]];
         gradphi_y[ig] = gradphi_y_real[pwb.ig2fftc[ig]];
         gradphi_z[ig] = gradphi_z_real[pwb.ig2fftc[ig]];
 
-        phi_work[ig] = phi_work_real[pwb.ig2fftc[ig]];
+        // phi_work[ig] = phi_work_real[pwb.ig2fftc[ig]];
         phi[ig] = phi_real[pwb.ig2fftc[ig]];
     }
 
@@ -654,6 +737,7 @@ void H_Hartree_pw::Leps(const UnitCell &ucell, PW_Basis &pwb,
 
     // div(epsilon*grad phi) in kspace
     // add the kappa^2 contrib, -phi_work
+    ModuleBase::GlobalFunc::ZEROS(lp, pwb.ngmc);
     for (int ig = pwb.gstart; ig < pwb.ngmc; ig++) {
         // use 2*pi or not ?
         // lp[ig] = ModuleBase::TWO_PI *
@@ -671,9 +755,31 @@ void H_Hartree_pw::Leps(const UnitCell &ucell, PW_Basis &pwb,
 
         lp[ig].real(ModuleBase::TWO_PI * tmp_imag);
         lp[ig].imag(-ModuleBase::TWO_PI * tmp_real);
+    }
+}
 
-        // use phi_work ?
-        // lp[ig] -= phi_work[ig];
+void H_Hartree_pw::Leps2(const UnitCell &ucell, PW_Basis &pwb,
+                         complex<double> *phi,
+                         double *epsilon, // epsilon from shapefunc, dim=nrxx
+                         complex<double> *gradphi_x, // dim=ngmc
+                         complex<double> *gradphi_y, complex<double> *gradphi_z,
+                         complex<double> *phi_work, complex<double> *lp) {
+    ModuleBase::Vector3<double> *grad_phi =
+        new ModuleBase::Vector3<double>[pwb.nrxx];
+    complex<double> *phi_real = new complex<double>[pwb.nrxx];
+    ModuleBase::GlobalFunc::ZEROS(phi_real, pwb.nrxx);
+    for (int ig = 0; ig < pwb.ngmc; ig++) {
+        phi_real[pwb.ig2fftc[ig]] = phi[ig];
+    }
+    cout << "test grad_rho" << endl;
+    GGA_PW::grad_rho(phi, grad_phi);
+    // for (int i = 0; i < 20; i++) {
+    //     grad_phi[i].print();
+    // }
+    for (int ir = 0; ir < pwb.nrxx; ir++) {
+        grad_phi[ir].x *= epsilon[ir];
+        grad_phi[ir].y *= epsilon[ir];
+        grad_phi[ir].z *= epsilon[ir];
     }
 }
 
@@ -700,6 +806,8 @@ void H_Hartree_pw::createcavity(const UnitCell &ucell, PW_Basis &pwb,
             pow(nablan[ir].x, 2) + pow(nablan[ir].y, 2) + pow(nablan[ir].z, 2);
     }
 
+    // cout << "nablan_2:" << endl;
+    // test_print(nablan_2, 10);
     // Laplacian of n
     lapl_rho(PS_TOTN, lapn);
 
@@ -769,6 +877,9 @@ void H_Hartree_pw::createcavity(const UnitCell &ucell, PW_Basis &pwb,
         Vcav[ig] = Vcav[ig] * tau ;
     }
     */
+    for (int ir = 0; ir < pwb.nrxx; ir++) {
+        vwork[ir] = vwork[ir] * tau;
+    }
 
     delete[] nablan;
     delete[] nablan_2;
@@ -841,21 +952,29 @@ void H_Hartree_pw::lapl_rho(const std::complex<double> *rhog, double *lapn) {
 void H_Hartree_pw::shape_gradn(const complex<double> *PS_TOTN, PW_Basis &pw,
                                double *eprime) {
     // Build a nrxx vector to DO FFT .
-    complex<double> *PS_TOTN_real = new complex<double>[pw.nrxx];
+    // complex<double> *PS_TOTN_real = new complex<double>[pw.nrxx];
+    // ModuleBase::GlobalFunc::ZEROS(PS_TOTN_real, pw.nrxx);
+
+    // for (int ig = 0; ig < pw.ngmc; ig++) {
+    //     PS_TOTN_real[pw.ig2fftc[ig]] = PS_TOTN[ig];
+    // }
+
+    // // to real space
+    // pw.FFT_chg.FFT3D(PS_TOTN_real, 1);
+
+    double *PS_TOTN_real = new double[pw.nrxx];
     ModuleBase::GlobalFunc::ZEROS(PS_TOTN_real, pw.nrxx);
-
-    for (int ig = 0; ig < pw.ngmc; ig++) {
-        PS_TOTN_real[pw.ig2fftc[ig]] = PS_TOTN[ig];
-    }
-
-    // to real space
-    pw.FFT_chg.FFT3D(PS_TOTN_real, 1);
+    GlobalC::UFFT.ToRealSpace(PS_TOTN, PS_TOTN_real);
 
     double epr_c = 1.0 / sqrt(ModuleBase::TWO_PI) / sigma_k;
     double epr_z = 0;
+    // for (int ir = 0; ir < pw.nrxx; ir++) {
+    //     epr_z = log(PS_TOTN_real[ir].real() / nc_k) / sqrt(2) / sigma_k;
+    //     eprime[ir] = epr_c * exp(-pow(epr_z, 2)) / PS_TOTN_real[ir].real();
+    // }
     for (int ir = 0; ir < pw.nrxx; ir++) {
-        epr_z = log(PS_TOTN_real[ir].real() / nc_k) / sqrt(2) / sigma_k;
-        eprime[ir] = epr_c * exp(-pow(epr_z, 2)) / PS_TOTN_real[ir].real();
+        epr_z = log(PS_TOTN_real[ir] / nc_k) / sqrt(2) / sigma_k;
+        eprime[ir] = epr_c * exp(-pow(epr_z, 2)) / PS_TOTN_real[ir];
     }
 
     delete[] PS_TOTN_real;
