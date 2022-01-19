@@ -271,6 +271,25 @@ int H_Hartree_pw::get_Z(string str) {
         return 1;
 }
 
+void test_nG_to_v(complex<double>* rhoG, PW_Basis &pwb, const UnitCell &cell)
+{
+    complex<double> *rhoG_new = new complex<double>[pwb.ngmc];
+    ModuleBase::GlobalFunc::ZEROS(rhoG_new, pwb.ngmc);
+    for(int ig=pwb.gstart;ig<pwb.ngmc;ig++)
+    {
+        double gg = pwb.get_NormG_cartesian(ig);
+        gg *= cell.tpiba2;
+        rhoG_new[ig] = rhoG[ig] / gg;
+    }
+    double *Porter = new double[pwb.nrxx];
+    GlobalC::UFFT.ToRealSpace(rhoG_new, Porter);
+    for(int i=0;i<10;i++)
+    {
+        // cout<<Porter[i]*(-4 * ModuleBase::PI)<<endl;
+        cout<<Porter[i]<<endl;
+    }
+}
+
 ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
                                               PW_Basis &pwb, const int &nspin,
                                               const double *const *const rho) {
@@ -295,6 +314,9 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
 
     cout<<"Porter_g, n_valence"<<endl;
     test_tot_rho_G(Porter_g, pwb, cell.omega);
+
+    cout<<"TEST: -4πn(valence) / G^2"<<endl;
+    test_nG_to_v(Porter_g, pwb, cell);
 
 /* compare v_hartree & n_valence / G^2
     complex<double> *Porter_g_tmp = new complex<double>[pwb.ngmc];
@@ -354,6 +376,9 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
 
     cout << "n valence" << endl;
     test_tot_rho_G(Porter_g, pwb, cell.omega);
+
+    cout<<"TEST: -4πN(nuclear) / G^2"<<endl;
+    test_nG_to_v(N, pwb, cell);
 
     for (int ig = 0; ig < pwb.ngmc; ig++) {
         TOTN[ig] = N[ig] - Porter_g[ig];
