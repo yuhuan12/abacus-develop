@@ -285,8 +285,7 @@ void test_nG_to_v(complex<double>* rhoG, PW_Basis &pwb, const UnitCell &cell)
     GlobalC::UFFT.ToRealSpace(rhoG_new, Porter);
     for(int i=0;i<10;i++)
     {
-        // cout<<Porter[i]*(-4 * ModuleBase::PI)<<endl;
-        cout<<Porter[i]<<endl;
+        cout<<Porter[i]*(-4 * ModuleBase::PI)<<endl;
     }
 }
 
@@ -364,6 +363,7 @@ ModuleBase::matrix H_Hartree_pw::v_correction(const UnitCell &cell,
     for(int ig=0; ig<pwb.ngmc; ig++)
     {
         N[ig] /= 2.0;
+        N[ig] /= (-4 * ModuleBase::PI);
     }
 
     cout<<"N nuclear before assign N[0]"<<endl;
