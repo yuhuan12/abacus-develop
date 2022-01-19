@@ -7,22 +7,24 @@ class item_test : public testing::Test
 {
 protected:
     
+    Read_Txt_Input::Input_List *input_list = nullptr;
+    Read_Txt_Input::Input_Process *input_process = nullptr;
 
     void SetUp()
     {
-        generate_input();
-        Read_Txt_Input::Input_List input_list;
-        input_list.set_items();
-        Read_Txt_Input::Input_Process input_process(input_list);
-		input_process.read_and_convert("INPUT");
+        input_list = new Read_Txt_Input::Input_List;
+        (*input_list).set_items();
+        this->input_process = new Read_Txt_Input::Input_Process(*input_list);
 	}
 
+    void first_test()
+    {
+        generate_input();
+		(*input_process).read_and_convert("INPUT");
+    }
 	void test_input(std::string input_name)
 	{
-		Read_Txt_Input::Input_List input_list;
-		input_list.set_items();
-		Read_Txt_Input::Input_Process input_process(input_list);
-		input_process.read_and_convert(input_name);
+		(*input_process).read_and_convert(input_name);
 	}
 
     void generate_input()
@@ -39,22 +41,18 @@ protected:
 
     void TearDown()
     {
+        delete[] input_process;
     }
 };
 
 
 
-TEST_F(item_test, mixing_beta)
+TEST_F(item_test, first)
 {
+    first_test();
     EXPECT_DOUBLE_EQ(ABACUS::para.scfp.mixing_beta, 0.5);
-}
-TEST_F(item_test, ecut)
-{
-	EXPECT_DOUBLE_EQ(ABACUS::para.pwp.ecut[0], 71.80);
-}
-TEST_F(item_test, scf_thr)
-{
-	EXPECT_DOUBLE_EQ(ABACUS::para.scfp.scf_thr, 3.5e-6);
+    EXPECT_DOUBLE_EQ(ABACUS::para.pwp.ecut[0], 71.80);
+    EXPECT_DOUBLE_EQ(ABACUS::para.scfp.scf_thr, 3.5e-6);
 }
 
 TEST_F(item_test, check_output)
