@@ -18,6 +18,7 @@ write_input.o\
 input_conv.o\
 run_pw.o\
 run_lcao.o\
+abacus_parameters.o\
 
 OBJS_PW=xc_type.o \
 xc_functional.o\

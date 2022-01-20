@@ -23,4 +23,5 @@ add_library(
     input_update.cpp
     run_lcao.cpp
     run_pw.cpp
+    abacus_parameters.cpp
 )

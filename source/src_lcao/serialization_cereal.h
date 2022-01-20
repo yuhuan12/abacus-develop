@@ -59,8 +59,9 @@ namespace Read_Txt_Input
 }
 
 
-
+#ifdef __MPI
 #include <mpi.h>
+#endif
 #include <sstream>
 
 namespace ModuleBase
@@ -68,7 +69,10 @@ namespace ModuleBase
 	template<typename T>
 	void bcast_data_cereal(T &data, const MPI_Comm &mpi_comm, const int &rank_bcast)
 	{
-		int my_rank;	MPI_Comm_rank( mpi_comm, &my_rank );
+		int my_rank;
+#ifdef __MPI	
+		MPI_Comm_rank( mpi_comm, &my_rank );
+#endif
 		if(my_rank==rank_bcast)
 		{
 			std::stringstream ss;
@@ -77,15 +81,21 @@ namespace ModuleBase
 				ar(data);
 			}
 			const int size = ss.str().size();
+#ifdef __MPI
 			MPI_Bcast( const_cast<int*>(&size), 1, MPI_INT, rank_bcast, mpi_comm );
 			MPI_Bcast( const_cast<char*>(ss.str().c_str()), size, MPI_CHAR, rank_bcast, mpi_comm ); 
+#endif
 		}
 		else
 		{
 			int size;
+#ifdef __MPI
 			MPI_Bcast( &size, 1, MPI_INT, rank_bcast, mpi_comm );
+#endif
 			std::vector<char> c(size);
+#ifdef __MPI
 			MPI_Bcast( c.data(), size, MPI_CHAR, rank_bcast, mpi_comm );   
+#endif
 			std::stringstream ss;  
 			ss.rdbuf()->pubsetbuf(c.data(),size);
 			{
