@@ -67,7 +67,7 @@ class H_Hartree_pw {
 
     static void eps_pot(const complex<double> *PS_TOTN,
                         const complex<double> *phi, PW_Basis &pw, double *d_eps,
-                        double *vwork, double &Ael);
+                        double *vwork);
 
     static void test_res(const UnitCell &ucell, PW_Basis &pwb,
                          const complex<double> *tot_N, complex<double> *phi,
