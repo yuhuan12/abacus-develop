@@ -409,6 +409,15 @@ void Input::Default(void)
     sigma_k = 0.6;
     nc_k = 0.00037;
 
+    //==========================================================
+    //    OFDFT sunliang added on 2022-05-05
+    //==========================================================
+    of_kinetic = "WT";
+    of_method = "tn";
+    of_conv = "energy";
+    of_tole = 1e-6;
+    of_tolp = 1e-5;
+
     return;
 }
 
@@ -1453,6 +1462,29 @@ bool Input::Read(const std::string &fn)
             read_value(ifs, nc_k);
         }
         //----------------------------------------------------------------------------------
+        //    OFDFT sunliang added on 2022-05-05
+        //----------------------------------------------------------------------------------
+        else if (strcmp("of_kinetic", word) == 0)
+        {
+            read_value(ifs, of_kinetic);
+        }
+        else if (strcmp("of_method", word) == 0)
+        {
+            read_value(ifs, of_method);
+        }
+        else if (strcmp("of_conv", word) == 0)
+        {
+            read_value(ifs, of_conv);
+        }
+        else if (strcmp("of_tole", word) == 0)
+        {
+            read_value(ifs, of_tole);
+        }
+        else if (strcmp("of_tolp", word) == 0)
+        {
+            read_value(ifs, of_tolp);
+        }
+        //----------------------------------------------------------------------------------
         else
         {
             // xiaohui add 2015-09-15
@@ -2109,6 +2141,15 @@ void Input::Bcast()
     Parallel_Common::bcast_double(sigma_k);
     Parallel_Common::bcast_double(nc_k);
 
+    //----------------------------------------------------------------------------------
+    //    OFDFT sunliang added on 2022-05-05
+    //----------------------------------------------------------------------------------
+    Parallel_Common::bcast_string(of_kinetic);
+    Parallel_Common::bcast_string(of_method);
+    Parallel_Common::bcast_string(of_conv);
+    Parallel_Common::bcast_double(of_tole);
+    Parallel_Common::bcast_double(of_tolp);
+
     return;
 }
 #endif
@@ -2310,6 +2351,13 @@ void Input::Check(void)
     else if (calculation == "test")
     {
         this->relax_nmax = 1;
+    }
+    else if (calculation == "ofdft") // sunliang added on 2022-05-05
+    {
+        if (pseudo_type != "blps")
+        {
+            ModuleBase::WARNING_QUIT("Input::Check", "pseudo_type in ofdft should be set as blps");
+        }
     }
     else
     {

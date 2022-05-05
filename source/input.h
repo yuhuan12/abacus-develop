@@ -389,6 +389,15 @@ class Input
     double nc_k;
 
     //==========================================================
+    // OFDFT  sunliang added on 2022-05-05
+    //==========================================================
+    string of_kinetic; // Kinetic energy functional, such as TF, VW, WT
+    string of_method;  // optimization method, include cg1, cg2, tn (default), bfgs
+    string of_conv;    // select the convergence criterion, potential, energy (default), or both
+    double of_tole;    // tolerance of the energy change (in Ry) for determining the convergence, default=2e-6 Ry
+    double of_tolp;    // tolerance of potential for determining the convergence, default=1e-5 in a.u.
+
+    //==========================================================
     // variables for test only
     //==========================================================
     bool test_just_neighbor;
