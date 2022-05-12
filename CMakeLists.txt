@@ -277,6 +277,7 @@ target_link_libraries(${ABACUS_BIN_NAME}
     driver
     xc
     esolver
+    opt
     -lm
 )
 

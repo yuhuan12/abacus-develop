@@ -123,6 +123,7 @@ This part of variables are used to control general system parameters.
   - *istate*: Please see the explanation for variable `nbands_istate`.
   - *ienvelope*: Please see the explanation for variable `nbands_istate`.
   - *md*: molecular dynamics
+  - *ofdft*: de orbital-free dft calculation.
 
   > Note: *istate* and *ienvelope* only work for LCAO basis set and are not working right now.
   >
@@ -1007,7 +1008,7 @@ This part of variables are used to control the molecular dynamics calculations.
 - **Description**:
   - When md_type = 1, md_tfreq controls the frequency of the temperature oscillations during the simulation. If it is too large, the
     temperature will fluctuate violently; if it is too small, the temperature will take a very long time to equilibrate with the atomic system.
-temperature will fluctuate violently; if it is too small, the temperature will take a very long time to equilibrate with the atomic system. 
+    temperature will fluctuate violently; if it is too small, the temperature will take a very long time to equilibrate with the atomic system.
     temperature will fluctuate violently; if it is too small, the temperature will take a very long time to equilibrate with the atomic system.
   - When md_type = 3, md_tfreq*md_dt is the collision probability in Anderson method.
   - If md_tfreq is not set in INPUT, md_tfreq will be autoset to be 1/40/md_dt.
@@ -1338,7 +1339,7 @@ This part of variables are used to control berry phase and wannier90 interfacae 
 
 - **Type**: Boolean
 - **Description**: option for choose whether calcualting constrained DFT or not.
-    Only used for TDDFT.
+  Only used for TDDFT.
 - **Default**:0
 
 #### ocp_set

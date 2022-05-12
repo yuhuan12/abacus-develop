@@ -29,10 +29,10 @@ void init_esolver(ESolver *&p_esolver, const string use_esol)
     {
         p_esolver = new ESolver_SDFT_PW();
     }
-    //  else if(use_esol == "ofdft")
-    //  {
-    //      p_esolver = new OFDFT();
-    //  }
+     else if(use_esol == "ofdft")
+     {
+         p_esolver = new ESolver_OF();
+     }
     else if(use_esol == "lj_pot")
     {
         p_esolver = new ESolver_LJ();
