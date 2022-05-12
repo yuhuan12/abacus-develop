@@ -2194,7 +2194,7 @@ void Input::Check(void)
     //----------------------------------------------------------
     // main parameters / electrons / spin ( 1/16 )
     //----------------------------------------------------------
-    if (calculation == "scf")
+    if (calculation == "scf" || calculation == "ofdft")
     {
         if (mem_saver == 1)
         {

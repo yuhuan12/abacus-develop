@@ -489,6 +489,14 @@ void Input_Conv::Convert(void)
     GlobalV::tau = INPUT.tau;
     GlobalV::sigma_k = INPUT.sigma_k;
     GlobalV::nc_k = INPUT.nc_k;
+    //-----------------------------------------------
+    // sunliang add for ofdft 20220-05-11
+    //-----------------------------------------------
+    GlobalV::of_kinetic = INPUT.of_kinetic;
+    GlobalV::of_method = INPUT.of_method;
+    GlobalV::of_conv = INPUT.of_conv;
+    GlobalV::of_tole = INPUT.of_tole;
+    GlobalV::of_tolp = INPUT.of_tolp;
     ModuleBase::timer::tick("Input_Conv", "Convert");
     return;
 }

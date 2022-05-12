@@ -225,5 +225,13 @@ extern double eb_k;
 extern double tau;
 extern double sigma_k;
 extern double nc_k;
+
+// ofdft sunliang add on 2022-05-11
+extern std::string of_kinetic; // Kinetic energy functional, such as TF, VW, WT
+extern std::string of_method;  // optimization method, include cg1, cg2, tn (default), bfgs
+extern std::string of_conv;    // select the convergence criterion, potential, energy (default), or both
+extern double of_tole;    // tolerance of the energy change (in Ry) for determining the convergence, default=2e-6 Ry
+extern double of_tolp;    // tolerance of potential for determining the convergence, default=1e-5 in a.u.
+
 } // namespace GlobalV
 #endif

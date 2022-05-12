@@ -37,6 +37,7 @@ class Input
     std::string calculation; // "scf" : self consistent calculation.
                              // "nscf" : non-self consistent calculation.
                              // "relax" : cell relaxations
+                             // "ofdft" : orbital free dft calculations.
     double pseudo_rcut; // cut-off radius for calculating msh
     bool pseudo_mesh; // 0: use msh to normalize radial wave functions;  1: use mesh, which is used in QE.
     int ntype; // number of atom types

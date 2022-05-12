@@ -198,4 +198,10 @@ double eb_k = 80.0;
 double tau = 1.0798 * 1e-5;
 double sigma_k = 0.6;
 double nc_k = 0.00037;
+
+std::string of_kinetic = "wt";
+std::string of_method = "tn";
+std::string of_conv = "energy";
+double of_tole = 2e-6;
+double of_tolp = 1e-5;
 } // namespace GlobalV
