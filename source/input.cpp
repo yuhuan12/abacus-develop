@@ -138,9 +138,9 @@ void Input::Default(void)
     nbands_sto = 0;
     nbands_istate = 5;
     pw_seed = 1;
-    nche_sto = 0;
+    nche_sto = 5;
     seed_sto = 0;
-    stotype = "pw";
+    bndpar = 1;
     kpar = 1;
     berry_phase = false;
     gdir = 3;
@@ -268,6 +268,7 @@ void Input::Default(void)
     out_wfc_r = 0;
     out_dos = 0;
     out_band = 0;
+    out_proj_band = 0;
     out_mat_hs = 0;
     out_mat_hs2 = 0; // LiuXh add 2019-07-15
     out_mat_r = 0; // jingan add 2019-8-14
@@ -286,6 +287,15 @@ void Input::Default(void)
     lcao_dk = 0.01;
     lcao_dr = 0.01;
     lcao_rmax = 30; // (a.u.)
+    //----------------------------------------------------------
+    // efield and dipole correction     Yu Liu add 2022-05-18
+    //----------------------------------------------------------
+    efield = false;
+    dipole = false;
+    edir = 2;
+    emaxpos = 0.5;
+    eopreg = 0.1;
+    eamp = 0.0;
     //----------------------------------------------------------
     // vdw									//jiyy add 2019-08-04
     //----------------------------------------------------------
@@ -527,8 +537,8 @@ bool Input::Read(const std::string &fn)
         else if (strcmp("nbands", word) == 0) // number of atom bands
         {
             read_value(ifs, nbands);
-            if (nbands <= 0)
-                ModuleBase::WARNING_QUIT("Input", "NBANDS must > 0");
+            if (nbands < 0)
+                ModuleBase::WARNING_QUIT("Input", "NBANDS must >= 0");
         }
         else if (strcmp("nbands_sto", word) == 0) // number of stochastic bands
         {
@@ -561,9 +571,9 @@ bool Input::Read(const std::string &fn)
         {
             read_value(ifs, emin_sto);
         }
-        else if (strcmp("stotype", word) == 0)
+        else if (strcmp("bndpar", word) == 0)
         {
-            read_value(ifs, stotype);
+            read_value(ifs, bndpar);
         }
         else if (strcmp("kpar", word) == 0) // number of pools
         {
@@ -1004,6 +1014,10 @@ bool Input::Read(const std::string &fn)
         {
             read_value(ifs, out_band);
         }
+        else if (strcmp("out_proj_band", word) == 0)
+        {
+            read_value(ifs, out_proj_band);
+        }
 
         else if (strcmp("out_mat_hs", word) == 0)
         {
@@ -1157,6 +1171,34 @@ bool Input::Read(const std::string &fn)
         else if (strcmp("md_damp", word) == 0)
         {
             read_value(ifs, mdp.md_damp);
+        }
+        //----------------------------------------------------------
+        // efield and dipole correction
+        // Yu Liu add 2022-05-18
+        //----------------------------------------------------------
+        else if (strcmp("efield", word) == 0)
+        {
+            read_value(ifs, efield);
+        }
+        else if (strcmp("dipole", word) == 0)
+        {
+            read_value(ifs, dipole);
+        }
+        else if (strcmp("edir", word) == 0)
+        {
+            read_value(ifs, edir);
+        }
+        else if (strcmp("emaxpos", word) == 0)
+        {
+            read_value(ifs, emaxpos);
+        }
+        else if (strcmp("eopreg", word) == 0)
+        {
+            read_value(ifs, eopreg);
+        }
+        else if (strcmp("eamp", word) == 0)
+        {
+            read_value(ifs, eamp);
         }
         //----------------------------------------------------------
         // tddft
@@ -1830,6 +1872,7 @@ void Input::Default_2(void) // jiyy add 2019-08-04
             vdw_radius = "95";
         }
     }
+    if(calculation.substr(0,3) != "sto")    bndpar = 1;
 }
 #ifdef __MPI
 void Input::Bcast()
@@ -1860,7 +1903,7 @@ void Input::Bcast()
     Parallel_Common::bcast_int(pw_seed);
     Parallel_Common::bcast_double(emax_sto);
     Parallel_Common::bcast_double(emin_sto);
-    Parallel_Common::bcast_string(stotype);
+    Parallel_Common::bcast_int(bndpar);
     Parallel_Common::bcast_int(kpar);
     Parallel_Common::bcast_bool(berry_phase);
     Parallel_Common::bcast_int(gdir);
@@ -1973,6 +2016,7 @@ void Input::Bcast()
     Parallel_Common::bcast_int(out_wfc_r);
     Parallel_Common::bcast_int(out_dos);
     Parallel_Common::bcast_int(out_band);
+    Parallel_Common::bcast_int(out_proj_band);
     Parallel_Common::bcast_int(out_mat_hs);
     Parallel_Common::bcast_int(out_mat_hs2); // LiuXh add 2019-07-15
     Parallel_Common::bcast_int(out_mat_r); // jingan add 2019-8-14
@@ -2022,6 +2066,13 @@ void Input::Bcast()
     Parallel_Common::bcast_double(mdp.msst_tscale);
     Parallel_Common::bcast_double(mdp.md_tfreq);
     Parallel_Common::bcast_double(mdp.md_damp);
+    // Yu Liu add 2022-05-18
+    Parallel_Common::bcast_bool(efield);
+    Parallel_Common::bcast_bool(dipole);
+    Parallel_Common::bcast_int(edir);
+    Parallel_Common::bcast_double(emaxpos);
+    Parallel_Common::bcast_double(eopreg);
+    Parallel_Common::bcast_double(eamp);
     /* 	// Peize Lin add 2014-04-07
         Parallel_Common::bcast_bool( vdwD2 );
         Parallel_Common::bcast_double( vdwD2_scaling );
@@ -2159,7 +2210,7 @@ void Input::Check(void)
     ModuleBase::TITLE("Input", "Check");
 
     if (nbands < 0)
-        ModuleBase::WARNING_QUIT("Input", "NBANDS must > 0");
+        ModuleBase::WARNING_QUIT("Input", "NBANDS must >= 0");
     //	if(nbands_istate < 0) ModuleBase::WARNING_QUIT("Input","NBANDS_ISTATE must > 0");
     if (nb2d < 0)
         ModuleBase::WARNING_QUIT("Input", "nb2d must > 0");
@@ -2215,7 +2266,7 @@ void Input::Check(void)
         */
         this->relax_nmax = 1;
     }
-    else if (calculation == "scf-sto") // qianrui 2021-2-20
+    else if (calculation == "sto-scf") // qianrui 2021-2-20
     {
         if (mem_saver == 1)
         {
@@ -2268,6 +2319,7 @@ void Input::Check(void)
         out_stru = 0;
         out_dos = 0;
         out_band = 0;
+        out_proj_band = 0;
         cal_force = 0;
         init_wfc = "file";
         init_chg = "atomic"; // useless,
@@ -2289,6 +2341,7 @@ void Input::Check(void)
         out_stru = 0;
         out_dos = 0;
         out_band = 0;
+        out_proj_band = 0;
         cal_force = 0;
         init_wfc = "file";
         init_chg = "atomic";
@@ -2524,6 +2577,12 @@ void Input::Check(void)
         {
             ModuleBase::WARNING_QUIT("Input", "not ready for linear_scaling method in lcao .");
         }
+        else if (ks_solver == "cusolver")
+        {
+#ifndef __MPI
+            ModuleBase::WARNING_QUIT("Input","Cusolver can not be used for series version.");
+#endif
+        }
         else
         {
             ModuleBase::WARNING_QUIT("Input", "please check the ks_solver parameter!");
@@ -2705,7 +2764,7 @@ void Input::Check(void)
             if (!(calculation == "nscf"))
                 ModuleBase::WARNING_QUIT("Input", "calculate berry phase, please set calculation = nscf");
         }
-        else if (basis_type == "lcao" && (ks_solver == "genelpa" || ks_solver == "scalapack_gvx"))
+        else if (basis_type == "lcao" && ks_solver == "genelpa" || ks_solver == "scalapack_gvx" || ks_solver == "cusolver")
         {
             if (!(calculation == "nscf"))
                 ModuleBase::WARNING_QUIT("Input", "calculate berry phase, please set calculation = nscf");

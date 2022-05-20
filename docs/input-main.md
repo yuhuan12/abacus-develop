@@ -8,7 +8,8 @@
 
 - [System variables](#system-variables)
 
-  [suffix](#suffix) | [ntype](#ntype) | [calculation](#calculation) | [symmetry](#symmetry) | [kpar](#kpar) | [latname](#latname) | [init_wfc](#init_wfc) | [init_chg](#init_chg) | [init_vel](#init_vel) | [nelec](#nelec) | [tot_magnetization](#tot-magnetization) | [dft_functional](#dft-functional) | [pseudo_type](#pseudo-type) |  [pseudo_rcut](#pseudo-rcut) | [pseudo_mesh](#pseudo_mesh) | [mem_saver](#mem-saver) | [diago_proc](#diago_proc) | [nbspline](#nbspline)
+    [suffix](#suffix) | [ntype](#ntype) | [calculation](#calculation) | [symmetry](#symmetry) | [kpar](#kpar) | [bndpar](#bndpar) | [latname](#latname) | [init_wfc](#init_wfc) | [init_chg](#init_chg) | [init_vel](#init_vel) | [nelec](#nelec) | [tot_magnetization](#tot-magnetization) | [dft_functional](#dft-functional) | [pseudo_type](#pseudo-type) |  [pseudo_rcut](#pseudo-rcut) | [pseudo_mesh](#pseudo_mesh) | [mem_saver](#mem-saver) | [diago_proc](#diago_proc) | [nbspline](#nbspline)
+
 - [Variables related to input files](#variables-related-to-input-files)
 
   [stru_file](#stru_file) | [kpoint_file](#kpoint-file) | [pseudo_dir](#pseudo-dir) | [orbital_dir](#orbital-dir) | [read_file_dir](#read-file-dir)
@@ -20,13 +21,15 @@
   [nb2d](#nb2d) | [lmaxmax](#lmaxmax) | [lcao_ecut](lcao-ecut) | [lcao_dk](#lcao-dk) | [lcao_dr](#lcao-dr) | [lcao_rmax](#lcao-rmax) | [search_radius](#search-radius) | [search_pbc](#search-pbc)
 - [Electronic structure](#electronic-structure)
 
-  [basis_type](#basis-type) | [ks_solver](#ks-solver) | [nbands](#nbands) | [nbands_istate](#nbands-istate) | [nspin](#nspin) | [occupations](#occupations) | [smearing_method](#smearing_method) | [smearing_sigma](#smearing_sigma) | [mixing_type](#mixing-type) | [mixing_beta](#mixing-beta) | [mixing_ndim](#mixing-ndim) | [mixing_gg0](#mixing-gg0) | [gamma_only](#gamma-only) | [printe](#printe) | [scf_nmax](#scf_nmax) | [scf_thr](#scf_thr) | [chg_extrap](#chg_extrap)
+    [basis_type](#basis-type) | [ks_solver](#ks-solver) | [nbands](#nbands) | [nbands_sto](#nbands_sto) | [nbands_istate](#nbands-istate) | [nspin](#nspin) | [occupations](#occupations) | [smearing_method](#smearing_method) | [smearing_sigma](#smearing_sigma) | [mixing_type](#mixing-type) | [mixing_beta](#mixing-beta) | [mixing_ndim](#mixing-ndim) | [mixing_gg0](#mixing-gg0) | [gamma_only](#gamma-only) | [printe](#printe) | [scf_nmax](#scf_nmax) | [scf_thr](#scf_thr) | [chg_extrap](#chg_extrap) | [nche_sto](#nche_sto) | [emin_sto](#emin_sto) | [emax_sto](#emax_sto) | [seed_sto](#seed_sto)
+
 - [Geometry relaxation](#geometry-relaxation)
 
   [relax_nmax](#relax_nmax) | [relax_method](#relax_method) | [relax_cg_thr](#relax_cg_thr) | [relax_bfgs_w1](#bfgs-w1) | [relax_bfgs_w2](#bfgs-w2) | [relax_bfgs_rmax](#relax_bfgs_rmax) | [relax_bfgs_rmin](#relax_bfgs_rmin) | [relax_bfgs_init](#relax_bfgs_init) | [cal_force](#cal_force) | [force_thr](#force-thr) | [force_thr_ev](#force-thr-ev) | [cal_stress](#cal_stress) | [stress_thr](#stress-thr) | [press1, press2, press3](#press) | [fixed_axes](#fixed-axes) | [cell_factor](#cell-factor)
 - [Variables related to output information](#variables-related-to-output-information)
 
-  [out_force](#out_force) | [out_mul](#out_mul) | [out_freq_elec](#out_freq_elec) | [out_freq_ion](#out_freq_ion) | [out_chg](#out_chg) | [out_pot](#out_pot) | [out_dm](#out-dm) | [out_wfc_pw](#out_wfc_pw) | [out_wfc_r](#out_wfc_r) | [out_wfc_lcao](#out_wfc_lcao) | [out_dos](#out-dos) | [out_band](#out-band) | [out_stru](#out-stru) | [out_level](#out_level) | [out_alllog](#out-alllog) | [out_mat_hs](#out_mat_hs) | [out_mat_r](#out_mat_r) | [out_mat_hs2](#out_mat_hs2) | [out_element_info](#out-element-info) | [restart_save](#restart_save) | [restart_load](#restart_load)
+    [out_force](#out_force) | [out_mul](#out_mul) | [out_freq_elec](#out_freq_elec) | [out_freq_ion](#out_freq_ion) | [out_chg](#out_chg) | [out_pot](#out_pot) | [out_dm](#out-dm) | [out_wfc_pw](#out_wfc_pw) | [out_wfc_r](#out_wfc_r) | [out_wfc_lcao](#out_wfc_lcao) | [out_dos](#out-dos) | [out_band](#out-band) | [out_proj_band](#out-proj-band) | [out_stru](#out-stru) | [out_level](#out_level) | [out_alllog](#out-alllog) | [out_mat_hs](#out_mat_hs) | [out_mat_r](#out_mat_r) | [out_mat_hs2](#out_mat_hs2) | [out_element_info](#out-element-info) | [restart_save](#restart_save) | [restart_load](#restart_load)
+
 - [Density of states](#density-of-states)
 
   [dos_edelta_ev](#dos-edelta-ev) | [dos_sigma](#dos-sigma) | [dos_scale](#dos-scale)
@@ -57,6 +60,10 @@
 - [OFDFT: orbital free density functional theory](#ofdft-orbital-free-density-functional-theory)
 
   [of_kinetic](#of_kinetic) | [of_method](#of_method) | [of_conv](#of_conv) | [of_tole](#of_tole) | [of_tolp](#of_tolp)
+
+- [Electric field and dipole correction](#Electric-field-and-dipole-correction)
+
+    [efield](#efield) | [dipole](#dipole) | [edir](#edir) | [emaxpos](#emaxpos) | [eopreg](#eopreg) | [eamp](#eamp)
 
 [back to main page](../README.md)
 
@@ -139,6 +146,12 @@ This part of variables are used to control general system parameters.
 
 - **Type**: Integer
 - **Description**: devide all processors into kpar groups, and k points will be distributed among each group. The value taken should be less than or equal to the number of k points as well as the number of MPI threads.
+- **Default**: 1
+
+#### bndpar
+
+- **Type**: Integer
+- **Description**: devide all processors into bndpar groups, and bands (only stochastic orbitals now) will be distributed among each group. It should be larger than 0.
 - **Default**: 1
 
 #### latname
@@ -407,6 +420,7 @@ calculations.
   - genelpa: This method should be used if you choose localized orbitals.
   - hpseps: old method, still used.
   - lapack: lapack can be used for localized orbitals, but is only used for single processor.
+  - cusolver: this method needs building with the cusolver component for lcao and at least one gpu is available.
 
   If you set ks_solver=`hpseps` for basis_type=`pw`, the program will be stopped with an error message:
 
@@ -424,6 +438,14 @@ calculations.
 - **Default**:
   - nspin=1: 1.2\*occupied_bands, occupied_bands+10)
   - nspin=2: max(1.2\*nelec, nelec+20)
+
+#### nbands_sto
+
+- **Type**: Integer
+- **Description**: 
+  - nbands_sto>0: Number of stochastic orbitals to calculate in stochastic DFT (SDFT) or mix stochastic-deterministic (MDFT). More bands obtain more precise results or smaller stochastic errors ($ \propto 1/\sqrt{N_{\chi}}$); 
+  - nbands_sto=0: Complete basis will be used to replace stochastic orbitals with the Chebyshev method (CT) and it will get the results the same as KSDFT without stochastic errors.
+- **Default**: 0
 
 #### nbands_istate
 
@@ -522,6 +544,32 @@ calculations.
   - first-order: first-order extrapolation
   - second-order: second-order extrapolation
 - **Default**:atomic
+
+#### nche_sto
+
+- **Type**: Integer
+- **Description**: Chebyshev expansion orders for SDFT, MDFT, CT methods.
+- **Default**:5
+
+#### emin_sto
+
+- **Type**: Real
+- **Description**: Trial energy to guess the lower bound of eigen energies of the Hamitonian Operator $\hat{H}$. The unit is Ry.
+- **Default**:0.0
+
+#### emax_sto
+
+- **Type**: Real
+- **Description**: Trial energy to guess the upper bound of eigen energies of the Hamitonian Operator $\hat{H}$. The unit is Ry.
+- **Default**:0.0
+
+#### seed_sto
+
+- **Type**: Integer
+- **Description**: The random seed to generate stochastic orbitals.
+  - seed_sto>=0: Stochastic orbitals have the form of $\exp(i2\pi\theta(G))$, where $\theta$ is a uniform distribution in $(0,1)$. If seed_sto=0, the seed is decided by time(NULL).
+  - seed_sto<=-1: Stochastic orbitals have the form of $\pm1$ with the equal probability. If seed_sto=-1, the seed is decided by time(NULL).
+- **Default**:0
 
 ### Geometry relaxation
 
@@ -707,6 +755,12 @@ This part of variables are used to control the output of properties.
 - **Description**: Controls whether to output the band structure. For mroe information, refer to the [worked example](examples/band-struc.md)
 - **Default**: 0
 
+#### out_proj_band
+
+- **Type**: Integer
+- **Description**: Controls whether to output the projected band structure. For mroe information, refer to the [worked example](examples/band-struc.md)
+- **Default**: 0
+
 #### out_stru
 
 - **Type**: Boolean
@@ -832,6 +886,48 @@ Warning: this function is not robust enough for version 2.2.0. Please try these 
 - **Type**: String
 - **Description**: the path of the trained, traced NN model file (generated by deepks-kit). used when deepks_scf is set to 1.
 - **Default**: None
+
+### Electric field and dipole correction
+
+This part of variables are relevant to electric field and dipole correction
+
+#### efield
+
+- **Type**: Boolean
+- **Description**: If set to true, a saw-like potential simulating an electric field
+is added to the bare ionic potential. 
+- **Default**: false
+
+#### dipole
+
+- **Type**: Boolean
+- **Description**: If dipole == true and efield == true,  a dipole correction is also
+added to the bare ionic potential. If you want no electric field, parameter eamp should be zero. Must be used ONLY in a slab geometry for surface calculations, with the discontinuity FALLING IN THE EMPTY SPACE.
+- **Default**: false
+
+#### edir
+
+- **Type**: Integer
+- **Description**: The direction of the electric field or dipole correction is parallel to the reciprocal lattice vector, so the potential is constant in planes defined by FFT grid points, edir = 0, 1 or 2. Used only if efield == true.
+- **Default**: 2
+
+#### emaxpos
+
+- **Type**: Real
+- **Description**: Position of the maximum of the saw-like potential along crystal axis edir, within the  unit cell, 0 < emaxpos < 1. Used only if efield == true.
+- **Default**: 0.5
+
+#### eopreg
+
+- **Type**: Real
+- **Description**: Zone in the unit cell where the saw-like potential decreases, 0 < eopreg < 1. Used only if efield == true.
+- **Default**: 0.1
+
+#### eamp
+
+- **Type**: Real
+- **Description**: Amplitude of the electric field, in ***Hartree*** a.u.; 1 a.u. = 51.4220632*10^10 V/m. Used only if efield == true. The saw-like potential increases with slope eamp in the region from (emaxpos+eopreg-1) to (emaxpos), then decreases until (emaxpos+eopreg), in units of the crystal vector edir. Important: the change of slope of this potential must be located in the empty region, or else unphysical forces will result.
+- **Default**: 0.0
 
 ### Exact Exchange
 

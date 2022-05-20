@@ -10,7 +10,6 @@ list(APPEND objects
     charge_pulay.cpp
     diago_cg.cpp
     diago_david.cpp
-    efield.cpp
     energy.cpp
     forces.cpp
     global.cpp
@@ -23,9 +22,8 @@ list(APPEND objects
     pw_complement.cpp
     soc.cpp
     sto_che.cpp
-    sto_elec.cpp
-    sto_hchi.cpp
     sto_iter.cpp
+    sto_hchi.cpp
     sto_wf.cpp
     stress_func_cc.cpp
     stress_func_ewa.cpp

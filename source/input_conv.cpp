@@ -12,7 +12,6 @@
 #include "src_io/epsilon0_vasp.h"
 #include "src_io/optical.h"
 #include "src_ions/ions_move_basic.h"
-#include "src_pw/efield.h"
 #include "src_pw/global.h"
 #include "src_pw/occupy.h"
 #ifdef __EXX
@@ -27,6 +26,7 @@
 #include "src_lcao/local_orbital_charge.h"
 #endif
 #include "module_base/timer.h"
+#include "module_surchem/efield.h"
 
 void Input_Conv::Convert(void)
 {
@@ -61,6 +61,7 @@ void Input_Conv::Convert(void)
     GlobalV::KPAR = temp_nproc;
 #else
     GlobalV::KPAR = INPUT.kpar;
+    GlobalV::NSTOGROUP = INPUT.bndpar;
 #endif
     GlobalV::CALCULATION = INPUT.calculation;
 
@@ -208,6 +209,16 @@ void Input_Conv::Convert(void)
         GlobalV::DOMAG_Z = false;
         GlobalV::NPOL = 1;
     }
+
+//----------------------------------------------------------
+// Yu Liu add 2022-05-18
+//----------------------------------------------------------
+    GlobalV::EFIELD = INPUT.efield;
+    GlobalV::DIPOLE = INPUT.dipole;
+    Efield::edir = INPUT.edir;
+    Efield::emaxpos = INPUT.emaxpos;
+    Efield::eopreg = INPUT.eopreg;
+    Efield::eamp = INPUT.eamp;
 
 //----------------------------------------------------------
 // Fuxiang He add 2016-10-26
@@ -434,6 +445,7 @@ void Input_Conv::Convert(void)
     GlobalC::wf.out_wfc_r = INPUT.out_wfc_r;
     GlobalC::en.out_dos = INPUT.out_dos;
     GlobalC::en.out_band = INPUT.out_band;
+    GlobalC::en.out_proj_band = INPUT.out_proj_band;
 #ifdef __LCAO
     Local_Orbital_Charge::out_dm = INPUT.out_dm;
     Pdiag_Double::out_mat_hs = INPUT.out_mat_hs;

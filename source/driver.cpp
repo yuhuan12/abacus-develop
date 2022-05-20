@@ -96,7 +96,11 @@ void Driver::atomic_world(void)
 	ModuleESolver::ESolver *p_esolver;
 	if(GlobalV::BASIS_TYPE=="pw" || GlobalV::BASIS_TYPE=="lcao_in_pw")
 	{
-		if (GlobalV::CALCULATION=="ofdft")
+		if(GlobalV::CALCULATION.substr(0,3) == "sto")
+		{
+			use_ensol = "sdft_pw";
+		}
+		else if (GlobalV::CALCULATION=="ofdft")
 		{
 			use_ensol = "ofdft";
 		}
@@ -104,6 +108,7 @@ void Driver::atomic_world(void)
 		{
 			use_ensol = "ksdft_pw"; 
 		}
+
 		//We set it temporarily
 		//Finally, we have ksdft_pw, ksdft_lcao, sdft_pw, ofdft, lj, eam, etc.
 		ModuleESolver::init_esolver(p_esolver, use_ensol);
