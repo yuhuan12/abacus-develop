@@ -42,6 +42,13 @@ void Opt_CG::allocate(
     ModuleBase::GlobalFunc::ZEROS(this->pgradient_old, this->nx);
 }
 
+void Opt_CG::setPara(
+    double dV
+)
+{
+    this->dV = dV;
+}
+
 // 
 // Refresh the class. 
 // If nx changes, reallocate space. If b is provided, initialize it.
@@ -120,14 +127,28 @@ void Opt_CG::next_direct(
 // 
 double Opt_CG::step_length(
     double *pAd, // Ad for Ax=b
-    double *pdirect // direct
+    double *pdirect, // direct
+    int &ifPD // 0 if positive definite, -1, -2 when not
 )
 {
     double dAd = this->inner_product(pdirect, pAd, this->nx);
+    ifPD = 0;
+    // check for positive-definiteness, very important for convergence
     if (dAd == 0)
     {
         this->alpha = 0;
         return 0;
+    }
+    else if (dAd < 0)
+    {
+        if (this->iter == 0)
+        {
+            ifPD = -1;
+        }
+        else
+        {
+            ifPD = -2;
+        }
     }
     this->alpha = this->gg / dAd;
     return this->alpha;

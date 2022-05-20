@@ -65,10 +65,12 @@ private:
     int iter = 0;
     int nrxx = 0; // PWBASIS
     double dV = 0; // CELL
+    int maxDCsrch = 200; // max no. of line search
+    double normdLdphi = 100.;
 
     // used in density optimization
     double *pdirect = NULL;
-    double theta = 0;
+    double theta = 0.2;
     double *pdLdphi = NULL; // dL/dphi
     double *pphi = NULL; // pphi = ppsi.get_pointer(0), it will be freed in ~Psi().
     char *task = NULL; // used in line search
@@ -80,16 +82,18 @@ private:
     double energy_last = 0;
     double energy_current = 0;
 
-    int flag = -1;
+    int flag = -1; // flag of TN
 
     void updateV(); // waiting
     void solveV();
+    void getNextDirect();
     void updateRho();
     bool checkExit();
 
     void calV(double *ptempPhi, double *rdLdphi);
-    double caldEdtheta(double *ptempPhi, double **ptempRho);
+    double caldEdtheta(double *ptempPhi, double **ptempRho, double theta);
     double cal_mu(double *pphi, double *pdEdphi);
+    void printInfo();
     double inner_product(double *pa, double *pb, int length, double dV=1)
     {
         double innerproduct = 0.;

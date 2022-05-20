@@ -118,11 +118,7 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &cell)
     // this->ppsi = new psi::Psi<double>(GlobalC::pw);
     // this->ppsi->resize(1, GlobalV::NSPIN, this->nrxx);
  
-    // cout<<GlobalC::pw.nrxx<<endl;
-    // cout<<"before ufft allocate"<<endl;
     GlobalC::UFFT.allocate();
-
-    // cout<<"after ufft allocate"<<endl;
 
     //=======================
     // init pseudopotential
@@ -178,10 +174,6 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &cell)
 
     ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running, "INIT BASIS");
 
-    // for (int i = 0 ; i < GlobalC::pw.nrxx; ++i)
-    // {
-    //     cout << GlobalC::CHR.rho[0][i];
-    // }
     // p_es->init(inp, cell, basis_pw);
     // p_sqrtRho = sqrt(pes.rho); // pseudo code
 
@@ -190,10 +182,13 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &cell)
     if (this->of_method == "tn")
     {
         this->opt_tn.allocate(this->nrxx);
+        this->opt_tn.setPara(this->dV);
     }
     else if (this->of_method == "cg1" || this->of_method == "cg2")
     {
         this->opt_cg.allocate(this->nrxx);
+        this->opt_cg.setPara(this->dV);
+        this->opt_dcsrch.set_paras(1e-4,1e-2);
     }
     else if (this->of_method == "bfgs")
     {
@@ -203,42 +198,48 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &cell)
 
 void ESolver_OF::Run(int istep, UnitCell_pseudo& cell)
 {
-    // =================== for test ===================
-    cout << "ncxyz" << setw(4) << GlobalC::pw.ncxyz << endl;
-    cout << "nrxx" << setw(4) << this->nrxx << endl;
-    cout << "dV" << setw(4) << this->dV << endl;
-    cout << "kedf" << setw(4) << this->of_kinetic << endl;
-    cout << "nelec" << setw(4) << this->nelec << endl;
 
     H_Ewald_pw::compute_ewald(GlobalC::ucell, GlobalC::pw);
-    // Symmetry_rho srho;
-    // for(int is=0; is<GlobalV::NSPIN; is++)
-    // {
-    //     srho.begin(is, GlobalC::CHR,GlobalC::pw, GlobalC::Pgrid, GlobalC::symm);
-    // }
-    cout << "============== OFDFT BEGIN ==============" <<  endl;
+    Symmetry_rho srho;
+    for(int is=0; is<GlobalV::NSPIN; is++)
+    {
+        srho.begin(is, GlobalC::CHR,GlobalC::pw, GlobalC::Pgrid, GlobalC::symm);
+    }
+    cout << "============================================ OFDFT ============================================" <<  endl;
     while(true)
     {
         this->updateV();
-        cout << "============== UPDATEV DONE ==============" <<  endl;
-        cout << "chemical potential    " << this->mu << endl;
+        // cout << "============== UPDATEV DONE ==============" <<  endl;
         this->cal_Energy(GlobalC::en);
         this->energy_llast = this->energy_last;
         this->energy_last = this->energy_current;
         this->energy_current = GlobalC::en.etot;
-        cout << "TOTAL ENERGY" << "\t" << energy_current << endl;
+        this->printInfo();
         if (this->checkExit())
         {
             break;
         }
-        cout << "============== CHECK DONE ==============" <<  endl;
         this->solveV();
-        cout << "============== SOLVEV DONE ==============" <<  endl;
         this->updateRho();
-        cout << "============== UPDATE DONE ==============" <<  endl;
         this->iter++;
-        break;
     }
+    if (GlobalC::CHR.out_chg > 0)
+    {
+        std::stringstream ssc;
+        ssc << GlobalV::global_out_dir << "tmp" << "_SPIN" << 1 << "_CHG";
+        GlobalC::CHR.write_rho(GlobalC::CHR.rho[0], 0, iter, ssc.str(), 11);
+    }
+}
+
+// ===================================================================
+// NOTE THIS FUNCTION SHOULD BE UESD AFTER POTENTIAL HAS BEEN UPDATED
+// ===================================================================
+void ESolver_OF::cal_Energy(energy &en)
+{
+    en.calculate_etot();
+    double eTF = this->tf.get_energy(GlobalC::CHR.rho);
+    double ePP = this->inner_product(GlobalC::pot.vltot, GlobalC::CHR.rho[0], this->nrxx, this->dV);
+    en.etot += eTF + ePP;
 }
 
 // 
@@ -247,17 +248,15 @@ void ESolver_OF::Run(int istep, UnitCell_pseudo& cell)
 void ESolver_OF::updateV()
 {
     double *dEdphi = new double[this->nrxx];
-    // =============================================
-    // Be careful !!
-    // =============================================
+    ModuleBase::GlobalFunc::ZEROS(dEdphi, this->nrxx);
+
     GlobalC::pot.vr = GlobalC::pot.v_of_rho(GlobalC::CHR.rho, GlobalC::CHR.rho_core);
     GlobalC::pot.set_vr_eff();
 
-    tf.get_potential(GlobalC::CHR.rho);
+    this->tf.get_potential(GlobalC::CHR.rho);
     for (int i = 0; i < this->nrxx; ++i)
-    {
-        
-        dEdphi[i] = (GlobalC::pot.vr_eff(0,i) + tf.potential[i]) * 2. * this->ppsi(0,0,i);
+    { 
+        dEdphi[i] = (GlobalC::pot.vr_eff(0,i) + this->tf.potential[i]) * 2. * this->ppsi(0,0,i); // is abs necessary?
     }
 
     this->mu = this->cal_mu(this->pphi, dEdphi);
@@ -265,63 +264,14 @@ void ESolver_OF::updateV()
     {
         this->pdLdphi[i] = dEdphi[i] - 2. * this->mu * this->ppsi(0,0,i);
     }
-
-    // ============= for test ==================
-    cout << "VEFF   VTF     RHO     DLDPHI  DEDPHI  PHI PSI" << endl;
-    for (int i = 0; i < this->nrxx; i+=100)
-    {
-        cout << GlobalC::pot.vr_eff(0, i) << "\t"
-        << tf.potential[i] << setw(12) << "\t"
-        << GlobalC::CHR.rho[0][i] << "\t"
-        << pdLdphi[i] << "\t"
-        << dEdphi[i] << "\t"
-        << this->pphi[i] << "\t"
-        << this->ppsi(0,0,i) << endl;
-    }
     delete[] dEdphi;
 }
-
-//
-// Get dL/dphi = dL/drho * drho/dphi = (dE/drho - mu) * 2 * ptempPhi and store it in rdLdphi
-// 
-void ESolver_OF::calV(double *ptempPhi, double *rdLdphi)
-{
-    double *dEdtempPhi = new double[this->nrxx];
-    double **tempRho = new double*[1];
-    tempRho[0] = new double[this->nrxx];
-    for (int i = 0; i < this->nrxx; ++i)
-    {
-        tempRho[0][i] = ptempPhi[i] * ptempPhi[i];
-    }
-    // =============================================
-    // Be careful !!
-    // =============================================
-    GlobalC::pot.vr = GlobalC::pot.v_of_rho(tempRho, GlobalC::CHR.rho_core);
-    GlobalC::pot.set_vr_eff();
-
-    tf.get_potential(tempRho);
-    for (int i = 0; i < this->nrxx; ++i)
-    {
-        dEdtempPhi[i] = (GlobalC::pot.vr_eff(0,i) + tf.potential[i]) * 2. * ptempPhi[i];
-    }
-    double tempMu = this->cal_mu(ptempPhi, dEdtempPhi);
-    for (int i = 0; i < this->nrxx; ++i)
-    {
-        rdLdphi[i] = dEdtempPhi[i] - 2. * tempMu * ptempPhi[i];
-    }
-    delete[] dEdtempPhi;
-    delete[] tempRho[0];
-    delete[] tempRho;
-} 
 
 //
 // Get optimization direction d and step theta
 //
 void ESolver_OF::solveV()
 {
-    // delete[] this->pphi;
-    // this->pphi = this->ppsi.get_pointer(0); // spin degenerate
-
     // (1) get |d0> with optimization algorithm
     if (this->of_method == "tn")
     {
@@ -329,11 +279,11 @@ void ESolver_OF::solveV()
     }
     else if (this->of_method == "cg1")
     {
-        opt_cg.next_direct(this->pphi, 1, this->pdirect);
+        opt_cg.next_direct(this->pdLdphi, 1, this->pdirect);
     }
     else if (this->of_method == "cg2")
     {
-        opt_cg.next_direct(this->pphi, 2, this->pdirect);
+        opt_cg.next_direct(this->pdLdphi, 2, this->pdirect);
     }
     else if (this->of_method == "bfgs")
     {
@@ -343,60 +293,63 @@ void ESolver_OF::solveV()
     {
         ModuleBase::WARNING_QUIT("ESolver_OF", "method must be CG, TN, or BFGS.");
     }
-    cout << "==================== TN DONE =========================" << endl;
-    for (int i = 0; i < this->nrxx; i+=100)
-    {
-        cout << this->pdirect[i] << endl;
-    }
 
-    double tempTheta = 0; // tempTheta = |d'|/|d0 + phi|, theta = min(theta, tempTheta)
-
-    // (2) make direction orthogonal to phi
-    // |d'> = |d0> - |phi><phi|d0>/nelec
-    double innerPhiDir = this->inner_product(this->pdirect, this->pphi, this->nrxx, dV=this->dV);
-    for (int i = 0; i < this->nrxx; ++i)
-    {
-        tempTheta += pow(this->pdirect[i] + this->pphi[i], 2);
-        this->pdirect[i] = this->pdirect[i] - this->pphi[i] * innerPhiDir / this->nelec;
-    }
-    tempTheta = 1. / tempTheta;
-
-    // (3) renormalize direction
-    // |d> = |d'> * \sqrt(nelec) / <d'|d'>
-    double normDir = sqrt(this->inner_product(this->pdirect, this->pdirect, this->nrxx, dV=this->dV));
-    for (int i = 0; i < this->nrxx; ++i)
-    {
-        tempTheta += tempTheta * this->pdirect[i] * this->pdirect[i];
-        this->pdirect[i] = sqrt(this->nelec) * this->pdirect[i] / normDir;
-    }
-    tempTheta = sqrt(tempTheta);
-
-    // (4) line search to find best theta
-    this->theta = min(this->theta, tempTheta);
+    // initialize tempPhi and tempRho used in line search
     double *ptempPhi = new double[this->nrxx];
     double **ptempRho = new double*[1];
     ptempRho[0] = new double[this->nrxx]; // No SPIN
     for (int i = 0; i < this->nrxx; ++i)
     {
-        ptempPhi[i] = this->pphi[i] * cos(this->theta) + this->pdirect[i] * sin(this->theta);
+        ptempPhi[i] = this->pphi[i];
         ptempRho[0][i] = ptempPhi[i] * ptempPhi[i];
     }
-    double E = 0.;
-    double dEdtheta = 0.;
+    
+    // (2) rotate and renormalize the direction
+    this->getNextDirect();
+
+    // (3) make sure dEdtheta>0 when theta = 0
+    double E = 0.; // energy of tempPhi and tempRho
+    double dEdtheta = 0.; // dE/dtheta at tempPhi
+    dEdtheta = this->caldEdtheta(ptempPhi, ptempRho, 0);
+    if (dEdtheta > 0)
+    {
+        GlobalV::ofs_warning << "ESolver_OF: WARNING " << "dEdphi > 0, replace direct with steepest descent method." << endl;
+        for (int i = 0; i < this->nrxx; ++i)
+        {
+            this->pdirect[i] = - this->pdLdphi[i];
+        }
+        this->getNextDirect();
+        dEdtheta = this->caldEdtheta(ptempPhi, ptempRho, 0);
+        if (dEdtheta > 0)
+        {
+            GlobalV::ofs_warning << "ESolver_OF: WARNING " << "when use steepes dencent method, dEdphi > 0, so we might get minimum." << endl;
+        }
+    }
+
+    // (4) line search to find best theta
+    int numDC = 0; // iteration number of line search
     this->task[0] = 'S'; this->task[1] = 'T'; this->task[2] = 'A'; this->task[3] = 'R'; this->task[4] = 'T';
     while (true)
     {
-        dEdtheta = this->caldEdtheta(ptempPhi, ptempRho);
         GlobalC::en.calculate_etot();
         E = GlobalC::en.etot;
         E += this->tf.get_energy(ptempRho);
+        E += this->inner_product(GlobalC::pot.vltot, ptempRho[0], this->nrxx, this->dV);
         this->opt_dcsrch.dcSrch(&E, &dEdtheta, &(this->theta), this->task);
+        numDC++;
+
         if (this->task[0] == 'F' && this->task[1] == 'G')
         {
             for (int i = 0; i < this->nrxx; ++i)
             {
                 ptempPhi[i] = this->pphi[i] * cos(this->theta) + this->pdirect[i] * sin(this->theta);
                 ptempRho[0][i] = ptempPhi[i] * ptempPhi[i];
+            }
+            dEdtheta = this->caldEdtheta(ptempPhi, ptempRho, this->theta);
+
+            if (numDC > this->maxDCsrch)
+            {
+                GlobalV::ofs_warning << "ESolver_OF linesearch: WARNING " << "excedd the max iter number." << endl;
             }
         }
         else if (task[0] == 'C' && task[1] == 'O')
@@ -406,12 +359,13 @@ void ESolver_OF::solveV()
         else if (task[0] == 'W' && task[1] == 'A')
         {
             GlobalV::ofs_warning << "ESolver_OF linesearch: WARNING " << task << std::endl; 
-            cout << task;
+            cout << task << endl;
             break;
         } 
         else if (task[0] == 'E' && task[1] == 'R')
         {
             GlobalV::ofs_warning << "ESolver_OF linesearch: ERROR " << task << std::endl; 
+            cout << task << endl;
             break;
         }
     }
@@ -420,34 +374,42 @@ void ESolver_OF::solveV()
     delete[] ptempRho;
 }
 
+// 
+// rotate and renormalize the direction, make it orthogonal to phi, and <d|d> = nelec
+// 
+void ESolver_OF::getNextDirect()
+{
+    double tempTheta = 0; // tempTheta = |d'|/|d0 + phi|, theta = min(theta, tempTheta)
+
+    // (1) make direction orthogonal to phi
+    // |d'> = |d0> - |phi><phi|d0>/nelec
+    double innerPhiDir = this->inner_product(this->pdirect, this->pphi, this->nrxx, dV=this->dV);
+    for (int i = 0; i < this->nrxx; ++i)
+    {
+        tempTheta += pow(this->pdirect[i] + this->pphi[i], 2);
+        this->pdirect[i] = this->pdirect[i] - this->pphi[i] * innerPhiDir / this->nelec;
+    }
+    tempTheta = 1. / tempTheta;
+
+    // (2) renormalize direction
+    // |d> = |d'> * \sqrt(nelec) / <d'|d'>
+    double normDir = sqrt(this->inner_product(this->pdirect, this->pdirect, this->nrxx, dV=this->dV));
+    for (int i = 0; i < this->nrxx; ++i)
+    {
+        tempTheta += tempTheta * this->pdirect[i] * this->pdirect[i];
+        this->pdirect[i] = sqrt(this->nelec) * this->pdirect[i] / normDir;
+    }
+    tempTheta = sqrt(tempTheta);
+    this->theta = min(this->theta, tempTheta);
+}
+
 void ESolver_OF::updateRho()
 {
     for (int i = 0; i < this->nrxx; ++i)
     {
         this->ppsi(0,0,i) = this->ppsi(0,0,i) * cos(this->theta) + this->pdirect[i] * sin(this->theta);
-        GlobalC::CHR.rho[0][i] = this->ppsi(0,0,i) * this->ppsi(0,0,i); // not sure
+        GlobalC::CHR.rho[0][i] = this->ppsi(0,0,i) * this->ppsi(0,0,i);
     }
-}
-
-// 
-// Calculate chemical potential mu.
-// mu = <dE/dphi|phi> / 2nelec.
-// 
-double ESolver_OF::cal_mu(double *pphi, double *pdEdphi)
-{
-    double mu = this->inner_product(pphi, pdEdphi, this->nrxx, this->dV);
-    cout << "ORGIN MU" << mu << endl;
-    mu = mu / (2.0*this->nelec);
-    return mu;
-}
-
-void ESolver_OF::cal_Energy(energy &en)
-{
-    en.calculate_etot();
-    cout << "ELOC" << "\t" << en.etot << endl;
-    double eTF = tf.get_energy(GlobalC::CHR.rho);
-    en.etot += eTF;
-    cout << "ETF" << "\t" << eTF << endl;
 }
 
 //
@@ -463,8 +425,8 @@ bool ESolver_OF::checkExit()
     bool potConv = false;
     bool energyConv = false;
 
-    double normdLdphi = sqrt(this->inner_product(this->pdLdphi, this->pdLdphi, this->nrxx));
-    if (normdLdphi < this->of_tolp)
+    this->normdLdphi = sqrt(this->inner_product(this->pdLdphi, this->pdLdphi, this->nrxx, this->dV));
+    if (this->normdLdphi < this->of_tolp)
         potConv = true;
 
     if (this->iter >= 3
@@ -472,7 +434,7 @@ bool ESolver_OF::checkExit()
         && abs(this->energy_current - this->energy_llast) < this->of_tole)
         energyConv = true;
 
-    if (this->of_conv == "enery" && energyConv)
+    if (this->of_conv == "energy" && energyConv)
     {
         this->conv = true;
         return true;
@@ -494,34 +456,98 @@ bool ESolver_OF::checkExit()
 }
 
 //
+// Get dL/dphi = dL/drho * drho/dphi = (dE/drho - mu) * 2 * ptempPhi and store it in rdLdphi
+// 
+void ESolver_OF::calV(double *ptempPhi, double *rdLdphi)
+{
+    double *dEdtempPhi = new double[this->nrxx];
+    double **tempRho = new double*[1];
+    tempRho[0] = new double[this->nrxx];
+    for (int i = 0; i < this->nrxx; ++i)
+    {
+        tempRho[0][i] = ptempPhi[i] * ptempPhi[i];
+    }
+
+    GlobalC::pot.vr = GlobalC::pot.v_of_rho(tempRho, GlobalC::CHR.rho_core);
+    GlobalC::pot.set_vr_eff();
+
+    this->tf.get_potential(tempRho);
+    for (int i = 0; i < this->nrxx; ++i)
+    {
+        dEdtempPhi[i] = (GlobalC::pot.vr_eff(0,i) + this->tf.potential[i]) * 2. * ptempPhi[i]; // Maybe abs(ptempPhi[i])
+    }
+    double tempMu = this->cal_mu(ptempPhi, dEdtempPhi);
+    for (int i = 0; i < this->nrxx; ++i)
+    {
+        rdLdphi[i] = dEdtempPhi[i] - 2. * tempMu * ptempPhi[i];
+    }
+    delete[] dEdtempPhi;
+    delete[] tempRho[0];
+    delete[] tempRho;
+} 
+
+//
 // Calculate dE/dTheta
 // dE/dTheta = <dE/dtempPhi|dtempPhi/dTheta>
 //           = <dE/dtempPhi|-phi*sin(theta)+d*cos(theta)>
 //
-double ESolver_OF::caldEdtheta(double *ptempPhi, double **ptempRho)
+double ESolver_OF::caldEdtheta(double *ptempPhi, double **ptempRho, double theta)
 {
     double *pdEdtempPhi = new double[this->nrxx];
     double *pdPhidTheta = new double[this->nrxx];
 
-    // =============================================
-    // Be careful !!
-    // =============================================
     GlobalC::pot.vr = GlobalC::pot.v_of_rho(ptempRho, GlobalC::CHR.rho_core);
     GlobalC::pot.set_vr_eff();
 
-    tf.get_potential(ptempRho);
+    this->tf.get_potential(ptempRho);
     for (int i = 0; i < this->nrxx; ++i)
     {
         pdEdtempPhi[i] = (GlobalC::pot.vr_eff(0,i) + tf.potential[i]) * 2 * ptempPhi[i];
     }
     for (int i = 0; i < this->nrxx; ++i)
     {
-        pdPhidTheta[i] = - this->pphi[i] * sin(this->theta) + this->pdirect[i] * cos(this->theta);
+        pdPhidTheta[i] = - this->pphi[i] * sin(theta) + this->pdirect[i] * cos(theta);
     }
     double dEdtheta = this->inner_product(pdEdtempPhi, pdPhidTheta, this->nrxx, this->dV);
     delete[] pdEdtempPhi;
     delete[] pdPhidTheta;
 
     return dEdtheta;
+}
+
+// 
+// Calculate chemical potential mu.
+// mu = <dE/dphi|phi> / 2nelec.
+// 
+double ESolver_OF::cal_mu(double *pphi, double *pdEdphi)
+{
+    double mu = this->inner_product(pphi, pdEdphi, this->nrxx, this->dV);
+    mu = mu / (2.0*this->nelec);
+    return mu;
+}
+
+// 
+// print nessecary information
+// 
+void ESolver_OF::printInfo()
+{
+    double minDen = GlobalC::CHR.rho[0][0];
+    double maxDen = GlobalC::CHR.rho[0][0];
+    double minPot = this->pdLdphi[0];
+    double maxPot = this->pdLdphi[0];
+    for (int i = 0; i < this->nrxx; ++i)
+    {
+        if (GlobalC::CHR.rho[0][i] < minDen) minDen = GlobalC::CHR.rho[0][i];
+        if (GlobalC::CHR.rho[0][i] > maxDen) maxDen = GlobalC::CHR.rho[0][i];
+        if (this->pdLdphi[i] < minPot) minPot = this->pdLdphi[i];
+        if (this->pdLdphi[i] > maxPot) maxPot = this->pdLdphi[i];
+    }
+    if (this->iter == 0) cout << "Iter        Etot(Ha)          Theta       PotNorm        min/max(den)          min/max(dL/dPhi)" << endl;
+    else cout << setw(6) << this->iter 
+    << setw(22) << setiosflags(ios::scientific) << setprecision(12) << this->energy_current/2. 
+    << setw(12) << setprecision(3) << this->theta
+    << setw(12) << this->normdLdphi
+    << setw(10) << minDen << "/ " << setw(12) << maxDen
+    << setw(10) << minPot << "/ " << setw(10) << maxPot << endl;
 }
 }
