@@ -19,9 +19,14 @@ public:
         // this->p_es = new ElecState_PW();
         // this->phamilt = new Hamilt_PW();
         this->classname = "ESolver_OF";
-        this->pdirect = new double[1];
-        this->pphi = new double[1];
-        this->pdLdphi = new double[1];
+
+        // this->pdirect = new *double[1];
+        // this->pphi = new *double[1];
+        // this->pdLdphi = new *double[1];
+
+        // this->theta = new double[1];
+        // this->mu = new double[1];
+        // this->normdLdphi = new double[1];
         this->task = new char[60];
     }
 
@@ -29,8 +34,36 @@ public:
     {
         // delete this->p_es;
         // delete this->ppsi;
-        if (this->pdirect != NULL) delete[] this->pdirect;
-        if (this->pdLdphi != NULL) delete[] this->pdLdphi;
+        if (this->pdirect != NULL)
+        {
+            for (int i = 0; i < GlobalV::NSPIN; ++i)
+            {
+                delete[] this->pdirect[i];
+            }
+            delete[] this->pdirect;
+        } 
+        if (this->pphi != NULL) delete[] this->pphi;
+        if (this->pdLdphi != NULL)
+        {
+            for (int i = 0; i < GlobalV::NSPIN; ++i)
+            {
+                delete[] this->pdLdphi[i];
+            }
+            delete[] this->pdLdphi;
+        } 
+        if (this->pdEdphi != NULL)
+        {
+            for (int i = 0; i < GlobalV::NSPIN; ++i)
+            {
+                delete[] this->pdEdphi[i];
+            }
+            delete[] this->pdEdphi;
+        } 
+
+        if (this->nelec != NULL) delete[] this->nelec;
+        // if (this->nelecspin != NULL) delete[] this->nelecspin;
+        if (this->theta != NULL) delete[] this->theta;
+        if (this->mu != NULL) delete[] this->mu;
         if (this->task != NULL) delete[] this->task;
     }
 
@@ -53,28 +86,34 @@ private:
     Opt_TN opt_tn;
     Opt_DCsrch opt_dcsrch;
 
+    Opt_CG *opt_cg_mag;
+
     // form Input
     string of_kinetic = "wt";   // Kinetic energy functional, such as TF, VW, WT
     string of_method = "tn";    // optimization method, include cg1, cg2, tn (default), bfgs
     string of_conv = "energy";  // select the convergence criterion, potential, energy (default), or both
     double of_tole = 2e-6;      // tolerance of the energy change (in Ry) for determining the convergence, default=2e-6 Ry
     double of_tolp = 1e-5;      // tolerance of potential for determining the convergence, default=1e-5 in a.u.
-    int nelec = 0;              // number of electrons
+    double *nelec = NULL;              // number of electrons
+    // double *nelecspin = NULL;   // number of spin up and spin down electrons
     int maxIter = 50;           // scf_nmax
 
     int iter = 0;
     int nrxx = 0; // PWBASIS
     double dV = 0; // CELL
     int maxDCsrch = 200; // max no. of line search
-    double normdLdphi = 100.;
 
     // used in density optimization
-    double *pdirect = NULL;
-    double theta = 0.2;
-    double *pdLdphi = NULL; // dL/dphi
-    double *pphi = NULL; // pphi = ppsi.get_pointer(0), it will be freed in ~Psi().
+    double **pdirect = NULL;
+    double *theta = NULL;
+    // double theta = 0.2;
+    double **pdEdphi = NULL; // dE/dphi
+    double **pdLdphi = NULL; // dL/dphi
+    double **pphi = NULL; // pphi[i] = ppsi.get_pointer(i), which will be freed in ~Psi().
     char *task = NULL; // used in line search
-    double mu = 0; // chemical potential
+    double *mu = NULL; // chemical potential
+    double normdLdphi = 100.;
+    int tnSpinFlag = -1; // spin flag used in calV, which will be called by opt_tn
 
     // used in conv check
     bool conv = false;
@@ -91,8 +130,8 @@ private:
     bool checkExit();
 
     void calV(double *ptempPhi, double *rdLdphi);
-    double caldEdtheta(double *ptempPhi, double **ptempRho, double theta);
-    double cal_mu(double *pphi, double *pdEdphi);
+    void caldEdtheta(double **ptempPhi, double **ptempRho, double *ptheta, double *rdEdtheta);
+    double cal_mu(double *pphi, double *pdEdphi, double nelec);
     void printInfo();
     double inner_product(double *pa, double *pb, int length, double dV=1)
     {
