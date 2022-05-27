@@ -8,6 +8,13 @@ namespace ModuleESolver
 {
 class ESolver_OF: public ESolver_FP
 {
+// =========== TO DO LIST =============
+// PARALLEL SUPPORT
+// MORE KEDF
+// MD TEST
+// SPIN POLARISE
+// REPLACE LINE SEARCH
+// ADD UNIT TEST
 public:
 
     // psi::Psi<double> *ppsi; 
@@ -61,19 +68,19 @@ public:
         } 
 
         if (this->nelec != NULL) delete[] this->nelec;
-        // if (this->nelecspin != NULL) delete[] this->nelecspin;
         if (this->theta != NULL) delete[] this->theta;
         if (this->mu != NULL) delete[] this->mu;
         if (this->task != NULL) delete[] this->task;
+        if (this->opt_cg_mag != NULL) delete[] this->opt_cg_mag;
     }
 
     // Basis_PW basis_pw;
     virtual void Init(Input &inp, UnitCell_pseudo &cell) override;
     virtual void Run(int istep, UnitCell_pseudo& cell) override;
 
-    virtual void cal_Energy(energy &en) override;  // waiting
-    virtual void cal_Force(ModuleBase::matrix &force) override {}; // waiting
-    virtual void cal_Stress(ModuleBase::matrix &stress) override {}; // waiting
+    virtual void cal_Energy(energy &en) override;
+    virtual void cal_Force(ModuleBase::matrix &force) override;
+    virtual void cal_Stress(ModuleBase::matrix &stress) override;
 
     virtual int getniter() override {
         return this->iter;

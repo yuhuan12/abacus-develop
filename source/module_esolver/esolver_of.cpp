@@ -265,9 +265,36 @@ void ESolver_OF::Run(int istep, UnitCell_pseudo& cell)
     }
     if (GlobalC::CHR.out_chg > 0)
     {
-        std::stringstream ssc;
-        ssc << GlobalV::global_out_dir << "tmp" << "_SPIN" << 1 << "_CHG";
-        GlobalC::CHR.write_rho(GlobalC::CHR.rho[0], 0, iter, ssc.str(), 11);
+        for (int is = 0; is < GlobalV::NSPIN; ++is)
+        {
+            std::stringstream ssc;
+            ssc << GlobalV::global_out_dir << "tmp" << "_SPIN" << is << "_CHG";
+            GlobalC::CHR.write_rho(GlobalC::CHR.rho[is], is, iter, ssc.str(), 11);
+        }
+    }
+    if (GlobalV::CAL_FORCE)
+    {
+        ModuleBase::matrix ff(GlobalC::ucell.nat, 3);
+        this->cal_Force(ff);
+        // for (int ia = 0; ia < GlobalC::ucell.nat; ++ia)
+        // {
+        //     for (int i = 0; i < 3; ++i)
+        //     {
+        //         cout << ff(ia,i) << "    ";
+        //     }
+        //     cout << endl;
+        // }
+    }
+    if (GlobalV::CAL_STRESS)
+    {
+        double unit_transform = ModuleBase::RYDBERG_SI / pow(ModuleBase::BOHR_RADIUS_SI,3) * 1.0e-8 / 10;
+        ModuleBase::matrix stress(3,3);
+        this->cal_Stress(stress);
+        cout << "STRESS (GPa)" << endl;
+        for (int i = 0; i < 3; ++i)
+        {
+            cout << setprecision(8) << setw(16) << stress(i, 0)*unit_transform << setw(16) << stress(i, 1)*unit_transform << setw(16) << stress(i, 2)*unit_transform << endl;
+        }
     }
 }
 
@@ -302,7 +329,7 @@ void ESolver_OF::updateV()
         ModuleBase::GlobalFunc::ZEROS(this->pdEdphi[is], this->nrxx);
         for (int ir = 0; ir < this->nrxx; ++ir)
         { 
-            this->pdEdphi[is][ir] = (GlobalC::pot.vr_eff(is,ir) + this->tf.potential[ir]) * 2. * this->ppsi(0,is,ir);
+            this->pdEdphi[is][ir] = (GlobalC::pot.vr_eff(is,ir) + this->tf.potential[is][ir]) * 2. * this->ppsi(0,is,ir);
         }
         this->mu[is] = this->cal_mu(this->pphi[is], this->pdEdphi[is], this->nelec[is]);
 
@@ -440,27 +467,127 @@ void ESolver_OF::solveV()
                     break;
                 }
             }
-            else if (task[0] == 'C' && task[1] == 'O')
+            else if (this->task[0] == 'C' && this->task[1] == 'O')
             {
                 break;
             }
-            else if (task[0] == 'W' && task[1] == 'A')
+            else if (this->task[0] == 'W' && this->task[1] == 'A')
             {
-                GlobalV::ofs_warning << "ESolver_OF linesearch: WARNING " << task << std::endl; 
-                cout << task << endl;
+                GlobalV::ofs_warning << "ESolver_OF linesearch: WARNING " << this->task << std::endl; 
+                cout << this->task << endl;
                 break;
             } 
-            else if (task[0] == 'E' && task[1] == 'R')
+            else if (this->task[0] == 'E' && this->task[1] == 'R')
             {
-                GlobalV::ofs_warning << "ESolver_OF linesearch: ERROR " << task << std::endl; 
-                cout << task << endl;
+                GlobalV::ofs_warning << "ESolver_OF linesearch: ERROR " << this->task << std::endl; 
+                cout << this->task << endl;
                 break;
             }
         }
     }
+    else if (GlobalV::NSPIN == 2)
+    {
+        this->opt_cg_mag->refresh();
+
+        double *pthetaDir = new double[GlobalV::NSPIN];
+        double *tempTheta = new double[GlobalV::NSPIN];
+        ModuleBase::GlobalFunc::ZEROS(pthetaDir, GlobalV::NSPIN);
+        ModuleBase::GlobalFunc::ZEROS(tempTheta, GlobalV::NSPIN);
+        double thetaAlpha = 0.;
+        double alphaTol = 1e-4;
+        double maxThetaDir = 0.;
+        double dEdalpha = 0.;
+        int thetaIter = 0;
+        int numDC = 0;
+
+        while (true)
+        {
+            this->opt_cg_mag->next_direct(dEdtheta, 1, pthetaDir);
+
+            // this->caldEdtheta(ptempPhi, ptempRho, this->theta, dEdtheta);
+            dEdalpha = this->inner_product(dEdtheta, pthetaDir, 2, 1.);
+
+            if (dEdalpha >= 0.)
+            {
+                for (int is = 0; is < GlobalV::NSPIN; ++is)
+                {
+                    pthetaDir[is] = -dEdtheta[is];
+                }
+                // this->caldEdtheta(ptempPhi, ptempRho, this->theta, dEdtheta);
+                dEdalpha = this->inner_product(dEdtheta, pthetaDir, 2, 1);
+            }
+
+            maxThetaDir = max(abs(pthetaDir[0]), abs(pthetaDir[1]));
+            thetaAlpha = min(0.1, 0.1*ModuleBase::PI/maxThetaDir);
+
+            // line search along thetaDir to find thetaAlpha
+            this->opt_dcsrch.set_paras(1e-4, 1e-2, 1e-12, 0., ModuleBase::PI/maxThetaDir);
+            this->task[0] = 'S'; this->task[1] = 'T'; this->task[2] = 'A'; this->task[3] = 'R'; this->task[4] = 'T';
+            numDC = 0;
+            while(true)
+            {
+                GlobalC::en.calculate_etot();
+                E = GlobalC::en.etot;
+                E += this->tf.get_energy(ptempRho);
+                for (int is = 0; is < GlobalV::NSPIN; ++is) E += this->inner_product(GlobalC::pot.vltot, ptempRho[is], this->nrxx, this->dV);
+                this->opt_dcsrch.dcSrch(&E, &dEdalpha, &thetaAlpha, this->task);
+                numDC++;
+
+                if (this->task[0] == 'F' && this->task[1] == 'G')
+                {
+                    for (int is = 0; is < GlobalV::NSPIN; ++is)
+                    {
+                        tempTheta[is] = this->theta[is] + thetaAlpha * pthetaDir[is];
+                        for (int ir = 0; ir < this->nrxx; ++ir)
+                        {
+                            ptempPhi[is][ir] = this->ppsi(0, is, ir) * cos(tempTheta[is]) + this->pdirect[is][ir] * sin(tempTheta[is]);
+                            ptempRho[is][ir] = ptempPhi[is][ir] * ptempPhi[is][ir];
+                        }
+                    }
+                    this->caldEdtheta(ptempPhi, ptempRho, tempTheta, dEdtheta);
+                    dEdalpha = this->inner_product(dEdtheta, pthetaDir, 2, 1);
+
+                    if (numDC > 10)
+                    {
+                        GlobalV::ofs_warning << "ESolver_OF linesearch: WARNING " << "excedd the max iter number." << endl;
+                        break;
+                    }
+                }
+                else if (this->task[0] == 'C' && this->task[1] == 'O')
+                {
+                    break;
+                }
+                else if (this->task[0] == 'W' && this->task[1] == 'A')
+                {
+                    GlobalV::ofs_warning << "ESolver_OF linesearch: WARNING " << this->task << std::endl; 
+                    cout << this->task << endl;
+                    break;
+                } 
+                else if (this->task[0] == 'E' && this->task[1] == 'R')
+                {
+                    GlobalV::ofs_warning << "ESolver_OF linesearch: ERROR " << this->task << std::endl; 
+                    cout << this->task << endl;
+                    break;
+                }
+            }
+
+            for (int is = 0; is < GlobalV::NSPIN; ++is) this->theta[is] += thetaAlpha * pthetaDir[is];
+            if (sqrt(dEdtheta[0] * dEdtheta[0] + dEdtheta[1] * dEdtheta[1]) < alphaTol) break;
+            thetaIter++;
+            if (thetaIter > 2) break;
+        }
+        delete[] tempTheta;
+        delete[] pthetaDir;
+    }
+
+    for (int is = 0; is < GlobalV::NSPIN; ++is)
+    {
+        delete[] ptempPhi[is];
+        delete[] ptempRho[is];
+    }
     delete[] ptempPhi;
-    delete[] ptempRho[0];
     delete[] ptempRho;
+    delete[] dEdtheta;
 }
 
 // 
@@ -611,7 +738,7 @@ void ESolver_OF::calV(double *ptempPhi, double *rdLdphi)
     this->tf.get_potential(tempRho);
     for (int i = 0; i < this->nrxx; ++i)
     {
-        dEdtempPhi[i] = (GlobalC::pot.vr_eff(this->tnSpinFlag,i) + this->tf.potential[i]) * 2. * ptempPhi[i];
+        dEdtempPhi[i] = (GlobalC::pot.vr_eff(this->tnSpinFlag,i) + this->tf.potential[this->tnSpinFlag][i]) * 2. * ptempPhi[i];
     }
     double tempMu = this->cal_mu(ptempPhi, dEdtempPhi, this->nelec[this->tnSpinFlag]);
     for (int i = 0; i < this->nrxx; ++i)
@@ -641,7 +768,7 @@ void ESolver_OF::caldEdtheta(double **ptempPhi, double **ptempRho, double *pthet
     {
         for (int ir = 0; ir < this->nrxx; ++ir)
         {
-            this->pdEdphi[is][ir] = (GlobalC::pot.vr_eff(is,ir) + tf.potential[ir]) * 2 * ptempPhi[is][ir];
+            this->pdEdphi[is][ir] = (GlobalC::pot.vr_eff(is,ir) + tf.potential[is][ir]) * 2 * ptempPhi[is][ir];
 
             pdPhidTheta[ir] = - this->ppsi(0, is, ir) * sin(ptheta[is]) + this->pdirect[is][ir] * cos(ptheta[is]);
         }
@@ -685,5 +812,18 @@ void ESolver_OF::printInfo()
     << setw(12) << this->normdLdphi
     << setw(10) << minDen << "/ " << setw(12) << maxDen
     << setw(10) << minPot << "/ " << setw(10) << maxPot << endl;
+}
+
+void ESolver_OF::cal_Force(ModuleBase::matrix& force)
+{
+    Forces ff;
+    ff.init(force);
+}
+void ESolver_OF::cal_Stress(ModuleBase::matrix& stress)
+{
+    Stress_PW ss;
+    ss.cal_stress(stress);
+    this->tf.get_stress(GlobalC::ucell.omega);
+    stress -= this->tf.stress;
 }
 }
