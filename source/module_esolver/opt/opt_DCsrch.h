@@ -15,8 +15,8 @@ class Opt_DCsrch
 public:
 	Opt_DCsrch()
 	{
-		this->isave = new int[2];
-    	this->dsave = new double[13];
+		this->isave = new int[3];
+    	this->dsave = new double[14];
 	}
 	~Opt_DCsrch()
 	{
@@ -72,11 +72,19 @@ public:
 	//        If task(1:5) = 'ERROR' then there is an error in the input arguments.
 	//  
 	void dcSrch(
-		double *f, 
-		double *g, 
-		double *rstp, 
+		double &f, 
+		double &g, 
+		double &rstp, 
 		char *rtask
 	);
+
+	// int dcsrch(double &stp, double &f, double &g, double &ftol, double &gtol, double &xtol,
+	// 		char *task, double &stpmin, double &stpmax, int *isave, double *dsave);
+
+	// int dcstep(double &stx, double &fx, double &dx, 
+	// 	double &sty, double &fy, double &dy, double &stp, 
+	// 	double &fp, double &dp, bool &brackt, double &stpmin, 
+	// 	double &stpmax);
 
 private:
 	double ftol = 1e-4; // nonnegative tolerance for the sufficient decrease condition.

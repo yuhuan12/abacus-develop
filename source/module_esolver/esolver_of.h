@@ -93,7 +93,7 @@ private:
     Opt_TN opt_tn;
     Opt_DCsrch opt_dcsrch;
 
-    Opt_CG *opt_cg_mag;
+    Opt_CG *opt_cg_mag = NULL;
 
     // form Input
     string of_kinetic = "wt";   // Kinetic energy functional, such as TF, VW, WT

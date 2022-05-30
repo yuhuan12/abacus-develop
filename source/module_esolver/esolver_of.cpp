@@ -449,7 +449,7 @@ void ESolver_OF::solveV()
             E = GlobalC::en.etot;
             E += this->tf.get_energy(ptempRho);
             E += this->inner_product(GlobalC::pot.vltot, ptempRho[0], this->nrxx, this->dV);
-            this->opt_dcsrch.dcSrch(&E, &dEdtheta[0], &(this->theta[0]), this->task);
+            this->opt_dcsrch.dcSrch(E, dEdtheta[0], this->theta[0], this->task);
             numDC++;
 
             if (this->task[0] == 'F' && this->task[1] == 'G')
@@ -530,7 +530,7 @@ void ESolver_OF::solveV()
                 E = GlobalC::en.etot;
                 E += this->tf.get_energy(ptempRho);
                 for (int is = 0; is < GlobalV::NSPIN; ++is) E += this->inner_product(GlobalC::pot.vltot, ptempRho[is], this->nrxx, this->dV);
-                this->opt_dcsrch.dcSrch(&E, &dEdalpha, &thetaAlpha, this->task);
+                this->opt_dcsrch.dcSrch(E, dEdalpha, thetaAlpha, this->task);
                 numDC++;
 
                 if (this->task[0] == 'F' && this->task[1] == 'G')
@@ -824,6 +824,6 @@ void ESolver_OF::cal_Stress(ModuleBase::matrix& stress)
     Stress_PW ss;
     ss.cal_stress(stress);
     this->tf.get_stress(GlobalC::ucell.omega);
-    stress -= this->tf.stress;
+    stress += this->tf.stress;
 }
 }
