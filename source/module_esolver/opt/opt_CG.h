@@ -2,7 +2,7 @@
 #include <math.h>
 
 #include "../../module_base/global_function.h"
-
+#include "../../src_parallel/parallel_reduce.h"
 // 
 // A class designed to deal with optimization problems with CG method.
 // Three forms of CG methods have been implemented, including standard flow to solve 

@@ -9,11 +9,9 @@ namespace ModuleESolver
 class ESolver_OF: public ESolver_FP
 {
 // =========== TO DO LIST =============
-// PARALLEL SUPPORT
 // MORE KEDF
 // MD TEST
 // SPIN POLARISE
-// REPLACE LINE SEARCH
 // ADD UNIT TEST
 public:
 
@@ -71,7 +69,7 @@ public:
         if (this->theta != NULL) delete[] this->theta;
         if (this->mu != NULL) delete[] this->mu;
         if (this->task != NULL) delete[] this->task;
-        if (this->opt_cg_mag != NULL) delete[] this->opt_cg_mag;
+        if (this->opt_cg_mag != NULL) delete this->opt_cg_mag;
     }
 
     // Basis_PW basis_pw;

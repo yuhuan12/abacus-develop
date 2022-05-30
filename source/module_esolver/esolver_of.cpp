@@ -305,11 +305,13 @@ void ESolver_OF::cal_Energy(energy &en)
 {
     en.calculate_etot();
     double eTF = this->tf.get_energy(GlobalC::CHR.rho);
+    Parallel_Reduce::reduce_double_all(eTF);
     double ePP = 0.;
     for (int is = 0; is < GlobalV::NSPIN; ++is)
     {
         ePP += this->inner_product(GlobalC::pot.vltot, GlobalC::CHR.rho[is], this->nrxx, this->dV);
     }
+    Parallel_Reduce::reduce_double_all(ePP);
     en.etot += eTF + ePP;
 }
 
@@ -318,8 +320,6 @@ void ESolver_OF::cal_Energy(energy &en)
 // 
 void ESolver_OF::updateV()
 {
-    // double *dEdphi = new double[this->nrxx];
-
     GlobalC::pot.vr = GlobalC::pot.v_of_rho(GlobalC::CHR.rho, GlobalC::CHR.rho_core);
     GlobalC::pot.set_vr_eff();
 
@@ -338,8 +338,6 @@ void ESolver_OF::updateV()
             this->pdLdphi[is][ir] = this->pdEdphi[is][ir] - 2. * this->mu[is] * this->ppsi(0,is,ir);
         }
     }
-
-    // delete[] dEdphi;
 }
 
 //
@@ -439,20 +437,27 @@ void ESolver_OF::solveV()
 // ======================== for test ============================
 
     // (4) line search to find best theta
+    double eTF = 0.;
+    double ePP = 0.;
     if (GlobalV::NSPIN == 1)
     {
         int numDC = 0; // iteration number of line search
-        this->task[0] = 'S'; this->task[1] = 'T'; this->task[2] = 'A'; this->task[3] = 'R'; this->task[4] = 'T';
+        strcpy(this->task, "START");
         while (true)
         {
             GlobalC::en.calculate_etot();
             E = GlobalC::en.etot;
-            E += this->tf.get_energy(ptempRho);
-            E += this->inner_product(GlobalC::pot.vltot, ptempRho[0], this->nrxx, this->dV);
+            eTF = this->tf.get_energy(ptempRho);
+            Parallel_Reduce::reduce_double_all(eTF);
+            ePP = this->inner_product(GlobalC::pot.vltot, ptempRho[0], this->nrxx, this->dV);
+            Parallel_Reduce::reduce_double_all(ePP);
+            // E += this->tf.get_energy(ptempRho);
+            // E += this->inner_product(GlobalC::pot.vltot, ptempRho[0], this->nrxx, this->dV);
+            E += eTF + ePP;
             this->opt_dcsrch.dcSrch(E, dEdtheta[0], this->theta[0], this->task);
             numDC++;
 
-            if (this->task[0] == 'F' && this->task[1] == 'G')
+            if (strncmp(this->task, "FG", 2) == 0)
             {
                 for (int i = 0; i < this->nrxx; ++i)
                 {
@@ -467,17 +472,17 @@ void ESolver_OF::solveV()
                     break;
                 }
             }
-            else if (this->task[0] == 'C' && this->task[1] == 'O')
+            else if (strncmp(this->task, "CO", 2) == 0)
             {
                 break;
             }
-            else if (this->task[0] == 'W' && this->task[1] == 'A')
+            else if (strncmp(this->task, "WA", 2) == 0)
             {
                 GlobalV::ofs_warning << "ESolver_OF linesearch: WARNING " << this->task << std::endl; 
                 cout << this->task << endl;
                 break;
             } 
-            else if (this->task[0] == 'E' && this->task[1] == 'R')
+            else if (strncmp(this->task, "ER", 2) == 0)
             {
                 GlobalV::ofs_warning << "ESolver_OF linesearch: ERROR " << this->task << std::endl; 
                 cout << this->task << endl;
@@ -522,18 +527,26 @@ void ESolver_OF::solveV()
 
             // line search along thetaDir to find thetaAlpha
             this->opt_dcsrch.set_paras(1e-4, 1e-2, 1e-12, 0., ModuleBase::PI/maxThetaDir);
-            this->task[0] = 'S'; this->task[1] = 'T'; this->task[2] = 'A'; this->task[3] = 'R'; this->task[4] = 'T';
+            strcpy(this->task, "START");
             numDC = 0;
             while(true)
             {
                 GlobalC::en.calculate_etot();
                 E = GlobalC::en.etot;
-                E += this->tf.get_energy(ptempRho);
-                for (int is = 0; is < GlobalV::NSPIN; ++is) E += this->inner_product(GlobalC::pot.vltot, ptempRho[is], this->nrxx, this->dV);
+                eTF = this->tf.get_energy(ptempRho);
+                Parallel_Reduce::reduce_double_all(eTF);
+                ePP = 0.;
+                for (int is = 0; is < GlobalV::NSPIN; ++is) {
+                    ePP += this->inner_product(GlobalC::pot.vltot, ptempRho[is], this->nrxx, this->dV);
+                }
+                Parallel_Reduce::reduce_double_all(ePP);
+                // E += this->tf.get_energy(ptempRho);
+                // for (int is = 0; is < GlobalV::NSPIN; ++is) E += this->inner_product(GlobalC::pot.vltot, ptempRho[is], this->nrxx, this->dV);
+                E += eTF + ePP;
                 this->opt_dcsrch.dcSrch(E, dEdalpha, thetaAlpha, this->task);
                 numDC++;
 
-                if (this->task[0] == 'F' && this->task[1] == 'G')
+                if (strncmp(this->task, "FG", 2) == 0)
                 {
                     for (int is = 0; is < GlobalV::NSPIN; ++is)
                     {
@@ -553,17 +566,17 @@ void ESolver_OF::solveV()
                         break;
                     }
                 }
-                else if (this->task[0] == 'C' && this->task[1] == 'O')
+                else if (strncmp(this->task, "CO", 2) == 0)
                 {
                     break;
                 }
-                else if (this->task[0] == 'W' && this->task[1] == 'A')
+                else if (strncmp(this->task, "WA", 2) == 0)
                 {
                     GlobalV::ofs_warning << "ESolver_OF linesearch: WARNING " << this->task << std::endl; 
                     cout << this->task << endl;
                     break;
                 } 
-                else if (this->task[0] == 'E' && this->task[1] == 'R')
+                else if (strncmp(this->task, "ER", 2) == 0)
                 {
                     GlobalV::ofs_warning << "ESolver_OF linesearch: ERROR " << this->task << std::endl; 
                     cout << this->task << endl;
@@ -602,22 +615,28 @@ void ESolver_OF::getNextDirect()
         // (1) make direction orthogonal to phi
         // |d'> = |d0> - |phi><phi|d0>/nelec
         double innerPhiDir = this->inner_product(this->pdirect[0], this->pphi[0], this->nrxx, dV=this->dV);
+        Parallel_Reduce::reduce_double_all(innerPhiDir);
         for (int i = 0; i < this->nrxx; ++i)
         {
             tempTheta += pow(this->pdirect[0][i] + this->ppsi(0, 0, i), 2);
             this->pdirect[0][i] = this->pdirect[0][i] - this->ppsi(0, 0, i) * innerPhiDir / this->nelec[0];
         }
-        tempTheta = 1. / tempTheta;
+        Parallel_Reduce::reduce_double_all(tempTheta);
+        tempTheta = sqrt(tempTheta);
+        // tempTheta = 1. / sqrt(tempTheta);
 
         // (2) renormalize direction
         // |d> = |d'> * \sqrt(nelec) / <d'|d'>
-        double normDir = sqrt(this->inner_product(this->pdirect[0], this->pdirect[0], this->nrxx, dV=this->dV));
+        double normDir = this->inner_product(this->pdirect[0], this->pdirect[0], this->nrxx, dV=this->dV);
+        Parallel_Reduce::reduce_double_all(normDir);
+        normDir = sqrt(normDir);
         for (int i = 0; i < this->nrxx; ++i)
         {
-            tempTheta += tempTheta * this->pdirect[0][i] * this->pdirect[0][i];
+            // tempTheta += tempTheta * this->pdirect[0][i] * this->pdirect[0][i];
             this->pdirect[0][i] = sqrt(this->nelec[0]) * this->pdirect[0][i] / normDir;
         }
-        tempTheta = sqrt(tempTheta);
+        tempTheta = normDir/tempTheta;
+        // tempTheta = sqrt(tempTheta);
         this->theta[0] = min(this->theta[0], tempTheta);
     }
     else if (GlobalV::NSPIN == 2)
@@ -627,6 +646,7 @@ void ESolver_OF::getNextDirect()
             // (1) make direction orthogonal to phi
             // |d'> = |d0> - |phi><phi|d0>/nelec
             double innerPhiDir = this->inner_product(this->pdirect[is], this->pphi[is], this->nrxx, dV=this->dV);
+            Parallel_Reduce::reduce_double_all(innerPhiDir);
             for (int i = 0; i < this->nrxx; ++i)
             {
                 this->pdirect[is][i] = this->pdirect[is][i] - this->ppsi(0, is, i) * innerPhiDir / this->nelec[is];
@@ -634,7 +654,9 @@ void ESolver_OF::getNextDirect()
 
             // (2) renormalize direction
             // |d> = |d'> * \sqrt(nelec) / <d'|d'>
-            double normDir = sqrt(this->inner_product(this->pdirect[is], this->pdirect[is], this->nrxx, dV=this->dV));
+            double normDir = this->inner_product(this->pdirect[is], this->pdirect[is], this->nrxx, dV=this->dV);
+            Parallel_Reduce::reduce_double_all(normDir);
+            normDir = sqrt(normDir);
             for (int i = 0; i < this->nrxx; ++i)
             {
                 this->pdirect[is][i] = sqrt(this->nelec[is]) * this->pdirect[is][i] / normDir;
@@ -674,6 +696,7 @@ bool ESolver_OF::checkExit()
     {
        this->normdLdphi += this->inner_product(this->pdLdphi[is], this->pdLdphi[is], this->nrxx, this->dV);
     }
+    Parallel_Reduce::reduce_double_all(this->normdLdphi);
     this->normdLdphi = sqrt(this->normdLdphi/this->nrxx/GlobalV::NSPIN);
 
     if (this->normdLdphi < this->of_tolp)
@@ -773,6 +796,7 @@ void ESolver_OF::caldEdtheta(double **ptempPhi, double **ptempRho, double *pthet
             pdPhidTheta[ir] = - this->ppsi(0, is, ir) * sin(ptheta[is]) + this->pdirect[is][ir] * cos(ptheta[is]);
         }
         rdEdtheta[is] = this->inner_product(this->pdEdphi[is], pdPhidTheta, this->nrxx, this->dV);
+        Parallel_Reduce::reduce_double_all(rdEdtheta[is]);
     }
     // delete[] pdEdtempPhi;
     delete[] pdPhidTheta;
@@ -785,6 +809,7 @@ void ESolver_OF::caldEdtheta(double **ptempPhi, double **ptempRho, double *pthet
 double ESolver_OF::cal_mu(double *pphi, double *pdEdphi, double nelec)
 {
     double mu = this->inner_product(pphi, pdEdphi, this->nrxx, this->dV);
+    Parallel_Reduce::reduce_double_all(mu);
     mu = mu / (2.0*nelec);
     return mu;
 }

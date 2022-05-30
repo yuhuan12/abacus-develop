@@ -1,5 +1,6 @@
 #include "./kedf_tf.h"
 #include <iostream>
+#include "../src_parallel/parallel_reduce.h"
 
 // 
 // Etf = cTF * \int{dr rho^{5/3}}
@@ -27,6 +28,7 @@ double KEDF_TF::get_energy(double **prho)
         energy *= 0.5 * this->dV * this->cTF;
     }
     this->TFenergy = energy;
+    Parallel_Reduce::reduce_double_all(this->TFenergy);
     return energy;
 }
 

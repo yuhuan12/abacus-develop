@@ -95,8 +95,13 @@ private:
     double get_epsilon(double *px, double *pcgDirect) 
     {
         double epsilon = 0.;
-        epsilon = 2 * sqrt(this->machPrec) * (1 + sqrt(this->inner_product(px, px, this->nx))) 
-                / sqrt(this->inner_product(pcgDirect, pcgDirect, this->nx));
+        double xx = this->inner_product(px, px, this->nx);
+        Parallel_Reduce::reduce_double_all(xx);
+        double dd = this->inner_product(pcgDirect, pcgDirect, this->nx);
+        Parallel_Reduce::reduce_double_all(dd);
+        epsilon = 2 * sqrt(this->machPrec) * (1 + sqrt(xx)) / sqrt(dd);
+        // epsilon = 2 * sqrt(this->machPrec) * (1 + sqrt(this->inner_product(px, px, this->nx))) 
+        //         / sqrt(this->inner_product(pcgDirect, pcgDirect, this->nx));
         return epsilon;
     }
 };
