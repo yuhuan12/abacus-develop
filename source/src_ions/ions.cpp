@@ -172,7 +172,7 @@ void Ions::opt_ions_pw(ModuleESolver::ESolver *p_esolver)
 
     }
 
-    if(GlobalV::CALCULATION=="scf" || GlobalV::CALCULATION=="relax" || GlobalV::CALCULATION=="cell-relax" || GlobalV::CALCULATION.substr(0,3)=="sto")
+    if(GlobalV::CALCULATION=="scf" || GlobalV::CALCULATION=="relax" || GlobalV::CALCULATION=="cell-relax" || GlobalV::CALCULATION.substr(0,3)=="sto" || GlobalV::CALCULATION=="ofdft")
     {
         GlobalV::ofs_running << "\n\n --------------------------------------------" << std::endl;
         GlobalV::ofs_running << std::setprecision(16);

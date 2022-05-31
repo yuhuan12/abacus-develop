@@ -36,7 +36,6 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &cell)
     this->of_conv = inp.of_conv;
     this->of_tole = inp.of_tole;
     this->of_tolp = inp.of_tolp;
-    // this->nelec = inp.nelec;
     this->maxIter = inp.scf_nmax;
 
     GlobalC::CHR.cal_nelec();
@@ -172,7 +171,6 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &cell)
     // {
     //     GlobalC::wf.wfcinit();
     // }
-    //===================================No SPIN yet======================================
     this->nelec = new double[GlobalV::NSPIN];
     if (GlobalV::NSPIN == 1)
     {
@@ -189,7 +187,7 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &cell)
     {
         for (int ibs = 0; ibs < this->nrxx; ++ibs)
         {
-            // Here we initialize rho with uniform density, 
+            // Here we initialize rho to be uniform, 
             // because the rho got by pot.init_pot -> Charge::atomic_rho may have minus elements.
             GlobalC::CHR.rho[is][ibs] = this->nelec[is]/GlobalC::ucell.omega;
             this->ppsi(0, is, ibs) = sqrt(GlobalC::CHR.rho[is][ibs]);
@@ -197,7 +195,7 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &cell)
         this->pphi[is] = this->ppsi.get_pointer(is);
     }
 
-    ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running, "INIT BASIS");
+    ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running, "INIT PSI");
 
     // p_es->init(inp, cell, basis_pw);
     // p_sqrtRho = sqrt(pes.rho); // pseudo code
@@ -220,11 +218,14 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &cell)
         return;
     }
 
+
     if (GlobalV::NSPIN == 2)
     {
         this->opt_cg_mag = new Opt_CG;
         this->opt_cg_mag->allocate(GlobalV::NSPIN);
     }
+
+    ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running, "INIT OPT");
 
     this->mu = new double[GlobalV::NSPIN];
     this->theta = new double[GlobalV::NSPIN];
@@ -242,7 +243,7 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &cell)
 
 void ESolver_OF::Run(int istep, UnitCell_pseudo& cell)
 {
-
+    ModuleBase::timer::tick("ESolver_OF", "Run");
     H_Ewald_pw::compute_ewald(GlobalC::ucell, GlobalC::pw);
     Symmetry_rho srho;
     for(int is=0; is<GlobalV::NSPIN; is++)
@@ -254,14 +255,20 @@ void ESolver_OF::Run(int istep, UnitCell_pseudo& cell)
     {
         this->updateV();
         this->cal_Energy(GlobalC::en);
-        // this->energy_llast = this->energy_last;
-        // this->energy_last = this->energy_current;
-        // this->energy_current = GlobalC::en.etot;
         this->printInfo();
         if (this->checkExit()) break;
         this->solveV();
         this->updateRho();
         this->iter++;
+    }
+    if (this->conv)
+    {
+        GlobalV::ofs_running << "\n charge density convergence is achieved" << std::endl;
+        GlobalV::ofs_running << " final etot is " << GlobalC::en.etot * ModuleBase::Ry_to_eV << " eV" << std::endl;
+    }
+    else
+    {
+        GlobalV::ofs_running << " convergence has NOT been achieved!" << std::endl;
     }
     if (GlobalC::CHR.out_chg > 0)
     {
@@ -288,6 +295,7 @@ void ESolver_OF::Run(int istep, UnitCell_pseudo& cell)
             cout << setprecision(8) << setw(16) << stress(i, 0)*unit_transform << setw(16) << stress(i, 1)*unit_transform << setw(16) << stress(i, 2)*unit_transform << endl;
         }
     }
+    ModuleBase::timer::tick("ESolver_OF", "Run");
 }
 
 // ===================================================================
@@ -315,7 +323,7 @@ void ESolver_OF::updateV()
     GlobalC::pot.vr = GlobalC::pot.v_of_rho(GlobalC::CHR.rho, GlobalC::CHR.rho_core);
     GlobalC::pot.set_vr_eff();
 
-    this->tf.get_potential(GlobalC::CHR.rho);
+    this->tf.tf_potential(GlobalC::CHR.rho);
     for (int is = 0; is < GlobalV::NSPIN; ++is)
     {
         ModuleBase::GlobalFunc::ZEROS(this->pdEdphi[is], this->nrxx);
@@ -764,7 +772,7 @@ void ESolver_OF::calV(double *ptempPhi, double *rdLdphi)
     GlobalC::pot.vr = GlobalC::pot.v_of_rho(tempRho, GlobalC::CHR.rho_core);
     GlobalC::pot.set_vr_eff();
 
-    this->tf.get_potential(tempRho);
+    this->tf.tf_potential(tempRho);
     for (int i = 0; i < this->nrxx; ++i)
     {
         dEdtempPhi[i] = (GlobalC::pot.vr_eff(this->tnSpinFlag,i) + this->tf.potential[this->tnSpinFlag][i]) * 2. * ptempPhi[i];
@@ -792,7 +800,7 @@ void ESolver_OF::caldEdtheta(double **ptempPhi, double **ptempRho, double *pthet
     GlobalC::pot.vr = GlobalC::pot.v_of_rho(ptempRho, GlobalC::CHR.rho_core);
     GlobalC::pot.set_vr_eff();
 
-    this->tf.get_potential(ptempRho);
+    this->tf.tf_potential(ptempRho);
     for (int is = 0; is < GlobalV::NSPIN; ++is)
     {
         for (int ir = 0; ir < this->nrxx; ++ir)
@@ -841,8 +849,10 @@ void ESolver_OF::printInfo()
     << setw(22) << setiosflags(ios::scientific) << setprecision(12) << GlobalC::en.etot/2. 
     << setw(12) << setprecision(3) << this->theta[0]
     << setw(12) << this->normdLdphi
+// ============ used to compare with PROFESS3.0 ================
     << setw(10) << minDen << "/ " << setw(12) << maxDen
     << setw(10) << minPot << "/ " << setw(10) << maxPot << endl;
+// =============================================================
 }
 
 void ESolver_OF::cal_Force(ModuleBase::matrix& force)

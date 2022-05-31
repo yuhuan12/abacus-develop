@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <math.h>
+#include "../module_base/timer.h"
 #include "../module_base/global_function.h"
 #include "../module_base/global_variable.h"
 #include "../module_base/matrix.h"
@@ -24,28 +25,11 @@ public:
         } 
     }
 
-    void set_para(int nx, double dV)
-    {
-        this->nx = nx;
-        this->dV = dV;
-        if (this->potential != NULL)
-        {
-            for (int is = 0; is < GlobalV::NSPIN; ++is)
-            {
-                delete[] this->potential[is];
-            }
-            delete[] this->potential;
-        } 
-        this->potential = new double*[GlobalV::NSPIN];
-        for (int is = 0; is < GlobalV::NSPIN; ++is)
-        {
-            this->potential[is] = new double[this->nx];
-            ModuleBase::GlobalFunc::ZEROS(this->potential[is], this->nx);
-        }
-    }
+    void set_para(int nx, double dV);
+
     double get_energy(double **prho);
     double get_energy_density(double **prho, int is, int ir);
-    void get_potential(const double * const * prho);
+    void tf_potential(const double * const * prho);
     void get_stress(double cellVol, double inpt_TFenergy=-1);
 
 
