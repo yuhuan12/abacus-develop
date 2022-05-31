@@ -39,7 +39,6 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &cell)
     this->maxIter = inp.scf_nmax;
 
     GlobalC::CHR.cal_nelec();
-    // this->nelec = GlobalC::CHR.nelec;
 
 	if(GlobalC::ucell.atoms[0].xc_func=="HSE"||GlobalC::ucell.atoms[0].xc_func=="PBE0")
 	{
@@ -109,8 +108,8 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &cell)
     //   b k_points
     //   c pseudopotential
     // 2 setup planeware basis, FFT,structure factor, ...
-    // 3 initialize local and nonlocal pseudopotential in G_space
-    // 4 initialize charge desity and warefunctios in G_space
+    // 3 initialize local pseudopotential in G_space
+    // 4 initialize charge desity and warefunctios in real space
     //----------------------------------------------------------
 
     //=====================================
@@ -121,9 +120,6 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &cell)
 
     GlobalC::wf.allocate(GlobalC::kv.nks);
     this->ppsi = psi::Psi<double>(1, GlobalV::NSPIN, this->nrxx);
-    // this->ppsi = new psi::Psi<double>(1, GlobalV::NSPIN, this->nrxx);
-    // this->ppsi = new psi::Psi<double>(GlobalC::pw);
-    // this->ppsi->resize(1, GlobalV::NSPIN, this->nrxx);
  
     GlobalC::UFFT.allocate();
 
@@ -198,7 +194,6 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &cell)
     ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running, "INIT PSI");
 
     // p_es->init(inp, cell, basis_pw);
-    // p_sqrtRho = sqrt(pes.rho); // pseudo code
 
     // phamilt->init(bas); 
     // phamilt->initpot(cell, pes);
@@ -218,7 +213,7 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &cell)
         return;
     }
 
-
+    // optimize theta if nspin=2
     if (GlobalV::NSPIN == 2)
     {
         this->opt_cg_mag = new Opt_CG;
@@ -286,14 +281,14 @@ void ESolver_OF::Run(int istep, UnitCell_pseudo& cell)
     }
     if (GlobalV::CAL_STRESS)
     {
-        double unit_transform = ModuleBase::RYDBERG_SI / pow(ModuleBase::BOHR_RADIUS_SI,3) * 1.0e-8 / 10;
+        // double unit_transform = ModuleBase::RYDBERG_SI / pow(ModuleBase::BOHR_RADIUS_SI,3) * 1.0e-8 / 10;
         ModuleBase::matrix stress(3,3);
         this->cal_Stress(stress);
-        cout << "STRESS (GPa)" << endl;
-        for (int i = 0; i < 3; ++i)
-        {
-            cout << setprecision(8) << setw(16) << stress(i, 0)*unit_transform << setw(16) << stress(i, 1)*unit_transform << setw(16) << stress(i, 2)*unit_transform << endl;
-        }
+        // cout << "STRESS (GPa)" << endl;
+        // for (int i = 0; i < 3; ++i)
+        // {
+        //     cout << setprecision(8) << setw(16) << stress(i, 0)*unit_transform << setw(16) << stress(i, 1)*unit_transform << setw(16) << stress(i, 2)*unit_transform << endl;
+        // }
     }
     ModuleBase::timer::tick("ESolver_OF", "Run");
 }
@@ -376,7 +371,7 @@ void ESolver_OF::solveV()
     for (int is = 0; is < GlobalV::NSPIN; ++is)
     {
         ptempPhi[is] = new double[this->nrxx];
-        ptempRho[is] = new double[this->nrxx]; // No SPIN
+        ptempRho[is] = new double[this->nrxx];
         for (int ir = 0; ir < this->nrxx; ++ir)
         {
             ptempPhi[is][ir] = this->pphi[is][ir];
@@ -387,14 +382,15 @@ void ESolver_OF::solveV()
     // (2) rotate and renormalize the direction
     this->getNextDirect();
 
-    // (3) make sure dEdtheta<0 when theta = 0
-    double E = 0.; // energy of tempPhi and tempRho
+    // (3) make sure dEdtheta<0 at theta = 0
+    double E = 0.; // energy at tempPhi and tempRho
     double *dEdtheta = new double[GlobalV::NSPIN]; // dE/dtheta at tempPhi
     double *tempTheta = new double[GlobalV::NSPIN];
     ModuleBase::GlobalFunc::ZEROS(dEdtheta, GlobalV::NSPIN);
     ModuleBase::GlobalFunc::ZEROS(tempTheta, GlobalV::NSPIN);
-    this->caldEdtheta(ptempPhi, ptempRho, tempTheta, dEdtheta);
+
     double dEdthetaThre = 1e5; // threshould of dEdtheta
+    this->caldEdtheta(ptempPhi, ptempRho, tempTheta, dEdtheta);
     for (int is = 0; is < GlobalV::NSPIN; ++is)
     {
         if (dEdtheta[is] > dEdthetaThre)
@@ -456,25 +452,27 @@ void ESolver_OF::solveV()
         strcpy(this->task, "START");
         while (true)
         {
+            // update energy
             GlobalC::en.calculate_etot();
             E = GlobalC::en.etot;
             eTF = this->tf.get_energy(ptempRho);
             Parallel_Reduce::reduce_double_all(eTF);
             ePP = this->inner_product(GlobalC::pot.vltot, ptempRho[0], this->nrxx, this->dV);
             Parallel_Reduce::reduce_double_all(ePP);
-            // E += this->tf.get_energy(ptempRho);
-            // E += this->inner_product(GlobalC::pot.vltot, ptempRho[0], this->nrxx, this->dV);
             E += eTF + ePP;
+            // line search to update theta[0]
             this->opt_dcsrch.dcSrch(E, dEdtheta[0], this->theta[0], this->task);
             numDC++;
 
             if (strncmp(this->task, "FG", 2) == 0)
             {
+                // update tempPhi and tempRho
                 for (int i = 0; i < this->nrxx; ++i)
                 {
                     ptempPhi[0][i] = this->pphi[0][i] * cos(this->theta[0]) + this->pdirect[0][i] * sin(this->theta[0]);
                     ptempRho[0][i] = ptempPhi[0][i] * ptempPhi[0][i];
                 }
+                // get dEdtheta at new tempPhi and tempRho
                 this->caldEdtheta(ptempPhi, ptempRho, this->theta, dEdtheta);
 
                 if (numDC > this->maxDCsrch)
@@ -520,7 +518,6 @@ void ESolver_OF::solveV()
         {
             this->opt_cg_mag->next_direct(dEdtheta, 1, pthetaDir);
 
-            // this->caldEdtheta(ptempPhi, ptempRho, this->theta, dEdtheta);
             dEdalpha = this->inner_product(dEdtheta, pthetaDir, 2, 1.);
 
             if (dEdalpha >= 0.)
@@ -529,7 +526,6 @@ void ESolver_OF::solveV()
                 {
                     pthetaDir[is] = -dEdtheta[is];
                 }
-                // this->caldEdtheta(ptempPhi, ptempRho, this->theta, dEdtheta);
                 dEdalpha = this->inner_product(dEdtheta, pthetaDir, 2, 1);
             }
 
@@ -634,7 +630,6 @@ void ESolver_OF::getNextDirect()
         }
         Parallel_Reduce::reduce_double_all(tempTheta);
         tempTheta = sqrt(tempTheta);
-        // tempTheta = 1. / sqrt(tempTheta);
 
         // (2) renormalize direction
         // |d> = |d'> * \sqrt(nelec) / <d'|d'>
@@ -643,14 +638,13 @@ void ESolver_OF::getNextDirect()
         normDir = sqrt(normDir);
         for (int i = 0; i < this->nrxx; ++i)
         {
-            // tempTheta += tempTheta * this->pdirect[0][i] * this->pdirect[0][i];
             this->pdirect[0][i] = sqrt(this->nelec[0]) * this->pdirect[0][i] / normDir;
         }
+
         tempTheta = normDir/tempTheta;
-        // tempTheta = sqrt(tempTheta);
         this->theta[0] = min(this->theta[0], tempTheta);
     }
-    else if (GlobalV::NSPIN == 2)
+    else if (GlobalV::NSPIN == 2) // theta = 0
     {
         for (int is = 0; is < GlobalV::NSPIN; ++is)
         {
@@ -694,11 +688,7 @@ void ESolver_OF::updateRho()
 // 
 bool ESolver_OF::checkExit()
 {
-    if (this->iter >= this->maxIter)
-    {
-        return true;
-    }
-    
+    this->conv = false;
     bool potConv = false;
     bool energyConv = false;
 
@@ -736,10 +726,41 @@ bool ESolver_OF::checkExit()
         this->conv = true;
         return true;
     }
+    else if (this->iter >= this->maxIter)
+    {
+        return true;
+    }
     else
     {
         return false;
     }
+}
+
+// 
+// print nessecary information
+// 
+void ESolver_OF::printInfo()
+{
+    double minDen = GlobalC::CHR.rho[0][0];
+    double maxDen = GlobalC::CHR.rho[0][0];
+    double minPot = this->pdLdphi[0][0];
+    double maxPot = this->pdLdphi[0][0];
+    for (int i = 0; i < this->nrxx; ++i)
+    {
+        if (GlobalC::CHR.rho[0][i] < minDen) minDen = GlobalC::CHR.rho[0][i];
+        if (GlobalC::CHR.rho[0][i] > maxDen) maxDen = GlobalC::CHR.rho[0][i];
+        if (this->pdLdphi[0][i] < minPot) minPot = this->pdLdphi[0][i];
+        if (this->pdLdphi[0][i] > maxPot) maxPot = this->pdLdphi[0][i];
+    }
+    if (this->iter == 0) cout << "Iter        Etot(Ha)          Theta       PotNorm        min/max(den)          min/max(dL/dPhi)" << endl;
+    else cout << setw(6) << this->iter 
+    << setw(22) << setiosflags(ios::scientific) << setprecision(12) << GlobalC::en.etot/2. 
+    << setw(12) << setprecision(3) << this->theta[0]
+    << setw(12) << this->normdLdphi
+// ============ used to compare with PROFESS3.0 ================
+    << setw(10) << minDen << "/ " << setw(12) << maxDen
+    << setw(10) << minPot << "/ " << setw(10) << maxPot << endl;
+// =============================================================
 }
 
 //
@@ -794,7 +815,6 @@ void ESolver_OF::calV(double *ptempPhi, double *rdLdphi)
 //
 void ESolver_OF::caldEdtheta(double **ptempPhi, double **ptempRho, double *ptheta, double *rdEdtheta)
 {
-    // double *pdEdtempPhi = new double[this->nrxx];
     double *pdPhidTheta = new double[this->nrxx];
 
     GlobalC::pot.vr = GlobalC::pot.v_of_rho(ptempRho, GlobalC::CHR.rho_core);
@@ -812,7 +832,6 @@ void ESolver_OF::caldEdtheta(double **ptempPhi, double **ptempRho, double *pthet
         rdEdtheta[is] = this->inner_product(this->pdEdphi[is], pdPhidTheta, this->nrxx, this->dV);
         Parallel_Reduce::reduce_double_all(rdEdtheta[is]);
     }
-    // delete[] pdEdtempPhi;
     delete[] pdPhidTheta;
 }
 
@@ -828,32 +847,6 @@ double ESolver_OF::cal_mu(double *pphi, double *pdEdphi, double nelec)
     return mu;
 }
 
-// 
-// print nessecary information
-// 
-void ESolver_OF::printInfo()
-{
-    double minDen = GlobalC::CHR.rho[0][0];
-    double maxDen = GlobalC::CHR.rho[0][0];
-    double minPot = this->pdLdphi[0][0];
-    double maxPot = this->pdLdphi[0][0];
-    for (int i = 0; i < this->nrxx; ++i)
-    {
-        if (GlobalC::CHR.rho[0][i] < minDen) minDen = GlobalC::CHR.rho[0][i];
-        if (GlobalC::CHR.rho[0][i] > maxDen) maxDen = GlobalC::CHR.rho[0][i];
-        if (this->pdLdphi[0][i] < minPot) minPot = this->pdLdphi[0][i];
-        if (this->pdLdphi[0][i] > maxPot) maxPot = this->pdLdphi[0][i];
-    }
-    if (this->iter == 0) cout << "Iter        Etot(Ha)          Theta       PotNorm        min/max(den)          min/max(dL/dPhi)" << endl;
-    else cout << setw(6) << this->iter 
-    << setw(22) << setiosflags(ios::scientific) << setprecision(12) << GlobalC::en.etot/2. 
-    << setw(12) << setprecision(3) << this->theta[0]
-    << setw(12) << this->normdLdphi
-// ============ used to compare with PROFESS3.0 ================
-    << setw(10) << minDen << "/ " << setw(12) << maxDen
-    << setw(10) << minPot << "/ " << setw(10) << maxPot << endl;
-// =============================================================
-}
 
 void ESolver_OF::cal_Force(ModuleBase::matrix& force)
 {

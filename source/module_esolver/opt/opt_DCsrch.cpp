@@ -2,8 +2,8 @@
 #include <string.h>
 #include <math.h>
 
-// This file is translated from MathDCsrch.f and MathDCstep.f of PROFESS3.0.
-// All annotation in the original file have been retained.
+// This file is translated from fortran codes MathDCsrch.f and MathDCstep.f of PROFESS3.0.
+// The structure and all annotation of the original file have been retained.
 // See original source at https://github.com/EACcodes/PROFESS/blob/master/Source.
 // sunliang 2022-05-30
 

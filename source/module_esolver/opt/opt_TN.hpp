@@ -170,13 +170,13 @@ void Opt_TN::next_direct(
 
         // get CG step length and update rdirect
         cg_alpha = cg.step_length(temp_Hcgd, cg_direct, cg_ifPD);
-        if (cg_ifPD == -1)
+        if (cg_ifPD == -1) // Hessian is not positive definite, and cgiter = 1.
         {
             for (int i = 0; i < this->nx; ++i) rdirect[i] += cg_alpha * cg_direct[i];
             flag = -1;
             break;
         }
-        else if (cg_ifPD == -2)
+        else if (cg_ifPD == -2) // Hessian is not positive definite, and cgiter > 1.
         {
             flag = -2;
             break;

@@ -2,8 +2,8 @@
 #include "./opt/opt_TN.hpp"
 #include "./opt/opt_DCsrch.h"
 #include "../module_psi/psi.h"
-
 #include "./kedf_tf.h"
+
 namespace ModuleESolver
 {
 class ESolver_OF: public ESolver_FP
@@ -12,7 +12,6 @@ class ESolver_OF: public ESolver_FP
 // MORE KEDF
 // MD TEST
 // SPIN POLARISE
-// ADD UNIT TEST
 public:
 
     // psi::Psi<double> *ppsi; 
@@ -99,14 +98,14 @@ private:
     string of_conv = "energy";  // select the convergence criterion, potential, energy (default), or both
     double of_tole = 2e-6;      // tolerance of the energy change (in Ry) for determining the convergence, default=2e-6 Ry
     double of_tolp = 1e-5;      // tolerance of potential for determining the convergence, default=1e-5 in a.u.
-    double *nelec = NULL;              // number of electrons
-    // double *nelecspin = NULL;   // number of spin up and spin down electrons
     int maxIter = 50;           // scf_nmax
 
+    // parameters from other module
     int iter = 0;
     int nrxx = 0; // PWBASIS
     double dV = 0; // CELL
-    int maxDCsrch = 200; // max no. of line search
+    double *nelec = NULL;              // number of electrons
+    // double *nelecspin = NULL;   // number of spin up and spin down electrons
 
     // used in density optimization
     double **pdirect = NULL;
@@ -117,27 +116,28 @@ private:
     double **pphi = NULL; // pphi[i] = ppsi.get_pointer(i), which will be freed in ~Psi().
     char *task = NULL; // used in line search
     double *mu = NULL; // chemical potential
-    double normdLdphi = 100.;
     int tnSpinFlag = -1; // spin flag used in calV, which will be called by opt_tn
+    int maxDCsrch = 200; // max no. of line search
 
     // used in conv check
     bool conv = false;
     double energy_llast = 0;
     double energy_last = 0;
     double energy_current = 0;
+    double normdLdphi = 100.;
 
     int flag = -1; // flag of TN
 
-    void updateV(); // waiting
+    void updateV();
     void solveV();
     void getNextDirect();
     void updateRho();
     bool checkExit();
+    void printInfo();
 
     void calV(double *ptempPhi, double *rdLdphi);
     void caldEdtheta(double **ptempPhi, double **ptempRho, double *ptheta, double *rdEdtheta);
     double cal_mu(double *pphi, double *pdEdphi, double nelec);
-    void printInfo();
     double inner_product(double *pa, double *pb, int length, double dV=1)
     {
         double innerproduct = 0.;

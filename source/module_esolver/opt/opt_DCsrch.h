@@ -7,8 +7,7 @@
 // }
 
 // 
-// A interface of line seach code opt_DCsrch.c, which is downloaded from 
-// https://github.com/NanoComp/mpb/blob/master/src/matrices/minpack2-linmin.c .
+// A interface of line seach
 // 
 class Opt_DCsrch
 {
@@ -77,14 +76,6 @@ public:
 		double &rstp, 
 		char *rtask
 	);
-
-	// int dcsrch(double &stp, double &f, double &g, double &ftol, double &gtol, double &xtol,
-	// 		char *task, double &stpmin, double &stpmax, int *isave, double *dsave);
-
-	// int dcstep(double &stx, double &fx, double &dx, 
-	// 	double &sty, double &fy, double &dy, double &stp, 
-	// 	double &fp, double &dp, bool &brackt, double &stpmin, 
-	// 	double &stpmax);
 
 private:
 	double ftol = 1e-4; // nonnegative tolerance for the sufficient decrease condition.
