@@ -173,16 +173,6 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &cell)
     //     GlobalC::wf.wfcinit();
     // }
     //===================================No SPIN yet======================================
-    this->pphi = new double*[GlobalV::NSPIN];
-    for (int is = 0; is < GlobalV::NSPIN; ++is)
-    {
-        for (int ibs = 0; ibs < this->nrxx; ++ibs)
-        {
-            this->ppsi(0, is, ibs) = sqrt(GlobalC::CHR.rho[is][ibs]);
-        }
-        this->pphi[is] = this->ppsi.get_pointer(is);
-    }
-
     this->nelec = new double[GlobalV::NSPIN];
     if (GlobalV::NSPIN == 1)
     {
@@ -193,6 +183,20 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &cell)
         this->nelec[0] = GlobalC::ucell.magnet.get_nelup();
         this->nelec[1] = GlobalC::ucell.magnet.get_neldw();
     }
+
+    this->pphi = new double*[GlobalV::NSPIN];
+    for (int is = 0; is < GlobalV::NSPIN; ++is)
+    {
+        for (int ibs = 0; ibs < this->nrxx; ++ibs)
+        {
+            // Here we initialize rho with uniform density, 
+            // because the rho got by pot.init_pot -> Charge::atomic_rho may have minus elements.
+            GlobalC::CHR.rho[is][ibs] = this->nelec[is]/GlobalC::ucell.omega;
+            this->ppsi(0, is, ibs) = sqrt(GlobalC::CHR.rho[is][ibs]);
+        }
+        this->pphi[is] = this->ppsi.get_pointer(is);
+    }
+
     ModuleBase::GlobalFunc::DONE(GlobalV::ofs_running, "INIT BASIS");
 
     // p_es->init(inp, cell, basis_pw);
@@ -249,16 +253,12 @@ void ESolver_OF::Run(int istep, UnitCell_pseudo& cell)
     while(true)
     {
         this->updateV();
-        // cout << "============== UPDATEV DONE ==============" <<  endl;
         this->cal_Energy(GlobalC::en);
-        this->energy_llast = this->energy_last;
-        this->energy_last = this->energy_current;
-        this->energy_current = GlobalC::en.etot;
+        // this->energy_llast = this->energy_last;
+        // this->energy_last = this->energy_current;
+        // this->energy_current = GlobalC::en.etot;
         this->printInfo();
-        if (this->checkExit())
-        {
-            break;
-        }
+        if (this->checkExit()) break;
         this->solveV();
         this->updateRho();
         this->iter++;
@@ -276,14 +276,6 @@ void ESolver_OF::Run(int istep, UnitCell_pseudo& cell)
     {
         ModuleBase::matrix ff(GlobalC::ucell.nat, 3);
         this->cal_Force(ff);
-        // for (int ia = 0; ia < GlobalC::ucell.nat; ++ia)
-        // {
-        //     for (int i = 0; i < 3; ++i)
-        //     {
-        //         cout << ff(ia,i) << "    ";
-        //     }
-        //     cout << endl;
-        // }
     }
     if (GlobalV::CAL_STRESS)
     {
@@ -387,16 +379,22 @@ void ESolver_OF::solveV()
     // (2) rotate and renormalize the direction
     this->getNextDirect();
 
-    // (3) make sure dEdtheta>0 when theta = 0
+    // (3) make sure dEdtheta<0 when theta = 0
     double E = 0.; // energy of tempPhi and tempRho
     double *dEdtheta = new double[GlobalV::NSPIN]; // dE/dtheta at tempPhi
     double *tempTheta = new double[GlobalV::NSPIN];
     ModuleBase::GlobalFunc::ZEROS(dEdtheta, GlobalV::NSPIN);
     ModuleBase::GlobalFunc::ZEROS(tempTheta, GlobalV::NSPIN);
     this->caldEdtheta(ptempPhi, ptempRho, tempTheta, dEdtheta);
+    double dEdthetaThre = 1e5; // threshould of dEdtheta
     for (int is = 0; is < GlobalV::NSPIN; ++is)
     {
-        if (dEdtheta[is] > 0)
+        if (dEdtheta[is] > dEdthetaThre)
+        {
+            cout << "dEdtheta    " << dEdtheta[is] << endl;
+            ModuleBase::WARNING_QUIT("esolver_of.cpp", "dE/dtheta is too large.");
+        }
+        else if (dEdtheta[is] > 0)
         {
             GlobalV::ofs_warning << "ESolver_OF: WARNING " << "dEdphi > 0, replace direct with steepest descent method." << endl;
             for (int ir = 0; ir < this->nrxx; ++ir)
@@ -405,7 +403,12 @@ void ESolver_OF::solveV()
             }
             this->getNextDirect();
             this->caldEdtheta(ptempPhi, ptempRho, tempTheta, dEdtheta);
-            if (dEdtheta[is] > 0)
+            if (dEdtheta[is] > dEdthetaThre)
+            {
+                cout << "dEdtheta    " << dEdtheta[is] << endl;
+                ModuleBase::WARNING_QUIT("esolver_of.cpp", "dE/dtheta is too large.");
+            }
+            else if (dEdtheta[is] > 0)
             {
                 GlobalV::ofs_warning << "ESolver_OF: WARNING " << "when use steepes dencent method, dEdphi > 0, so we might get minimum." << endl;
             }
@@ -702,6 +705,9 @@ bool ESolver_OF::checkExit()
     if (this->normdLdphi < this->of_tolp)
         potConv = true;
 
+    this->energy_llast = this->energy_last;
+    this->energy_last = this->energy_current;
+    this->energy_current = GlobalC::en.etot;
     if (this->iter >= 3
         && abs(this->energy_current - this->energy_last) < this->of_tole
         && abs(this->energy_current - this->energy_llast) < this->of_tole)
@@ -832,7 +838,7 @@ void ESolver_OF::printInfo()
     }
     if (this->iter == 0) cout << "Iter        Etot(Ha)          Theta       PotNorm        min/max(den)          min/max(dL/dPhi)" << endl;
     else cout << setw(6) << this->iter 
-    << setw(22) << setiosflags(ios::scientific) << setprecision(12) << this->energy_current/2. 
+    << setw(22) << setiosflags(ios::scientific) << setprecision(12) << GlobalC::en.etot/2. 
     << setw(12) << setprecision(3) << this->theta[0]
     << setw(12) << this->normdLdphi
     << setw(10) << minDen << "/ " << setw(12) << maxDen

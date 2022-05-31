@@ -93,7 +93,7 @@ private:
 
     Opt_CG *opt_cg_mag = NULL;
 
-    // form Input
+    // from Input
     string of_kinetic = "wt";   // Kinetic energy functional, such as TF, VW, WT
     string of_method = "tn";    // optimization method, include cg1, cg2, tn (default), bfgs
     string of_conv = "energy";  // select the convergence criterion, potential, energy (default), or both

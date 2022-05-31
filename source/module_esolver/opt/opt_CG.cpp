@@ -142,7 +142,7 @@ double Opt_CG::step_length(
     }
     else if (dAd < 0)
     {
-        if (this->iter == 0)
+        if (this->iter == 1)
         {
             ifPD = -1;
         }
