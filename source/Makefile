@@ -19,6 +19,7 @@ VPATH=./src_global\
 :./module_deepks\
 :./module_xc\
 :./module_esolver\
+:./module_esolver/opt\
 :./module_hsolver\
 :./module_elecstate\
 :./module_psi\
