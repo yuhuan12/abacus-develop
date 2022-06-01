@@ -400,6 +400,11 @@ class Input
     double tau;
     double sigma_k;
     double nc_k;
+    // gauss charge
+    double comp_q;
+    double comp_l;
+    double comp_center;
+    int comp_dim;
 
     //==========================================================
     // OFDFT  sunliang added on 2022-05-05
