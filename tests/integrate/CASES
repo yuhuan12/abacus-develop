@@ -191,3 +191,6 @@
 842_NO_GO_LT_triclinic
 
 901_OF_OP_truncatedNewton
+901_OF_OP_CG1
+901_OF_OP_CG2
+902_OF_KE_TF
