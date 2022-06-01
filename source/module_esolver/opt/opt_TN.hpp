@@ -34,6 +34,14 @@ public:
         this->cg.allocate(this->nx);
     }
     
+    void setPara(
+        double dV
+    )
+    {
+        this->dV = dV;
+        this->cg.setPara(this->dV);
+    }
+
     // 
     // Refresh the class. 
     // If nx changes, reallocate space in cg.
@@ -65,16 +73,17 @@ public:
     // }
 private:
     Opt_CG cg;
+    double dV = 1.;
     
     int nx = 0; // length of the solution array x
     int iter = 0; // number of the iteration
     double machPrec = 0.; // machine precise
 
-    double inner_product(double *pa, double *pb, int length, double dV=1)
+    double inner_product(double *pa, double *pb, int length)
     {
         double innerproduct = 0.;
         for (int i = 0; i < length; ++i) innerproduct += pa[i] * pb[i];
-        innerproduct *= dV;
+        innerproduct *= this->dV;
         return innerproduct;
     }
 
@@ -86,8 +95,13 @@ private:
     double get_epsilon(double *px, double *pcgDirect) 
     {
         double epsilon = 0.;
-        epsilon = 2 * sqrt(this->machPrec) * (1 + sqrt(this->inner_product(px, px, this->nx))) 
-                / sqrt(this->inner_product(pcgDirect, pcgDirect, this->nx));
+        double xx = this->inner_product(px, px, this->nx);
+        Parallel_Reduce::reduce_double_all(xx);
+        double dd = this->inner_product(pcgDirect, pcgDirect, this->nx);
+        Parallel_Reduce::reduce_double_all(dd);
+        epsilon = 2 * sqrt(this->machPrec) * (1 + sqrt(xx)) / sqrt(dd);
+        // epsilon = 2 * sqrt(this->machPrec) * (1 + sqrt(this->inner_product(px, px, this->nx))) 
+        //         / sqrt(this->inner_product(pcgDirect, pcgDirect, this->nx));
         return epsilon;
     }
 };
@@ -133,6 +147,7 @@ void Opt_TN::next_direct(
 
     cg.refresh(0, minus_gradient);
     int cg_iter = 0;
+    int cg_ifPD = 0;
 
     double epsilon = 0.; // step length in interpolation
     double cg_alpha = 0.; // step length got by CG
@@ -152,8 +167,21 @@ void Opt_TN::next_direct(
         (t->*p_calGradient)(temp_x, temp_gradient);
         for (int i = 0; i < this->nx; ++i) temp_Hcgd[i] = (temp_gradient[i] - pgradient[i]) / epsilon;
 
+
         // get CG step length and update rdirect
-        cg_alpha = cg.step_length(temp_Hcgd, cg_direct);
+        cg_alpha = cg.step_length(temp_Hcgd, cg_direct, cg_ifPD);
+        if (cg_ifPD == -1) // Hessian is not positive definite, and cgiter = 1.
+        {
+            for (int i = 0; i < this->nx; ++i) rdirect[i] += cg_alpha * cg_direct[i];
+            flag = -1;
+            break;
+        }
+        else if (cg_ifPD == -2) // Hessian is not positive definite, and cgiter > 1.
+        {
+            flag = -2;
+            break;
+        }
+
         for (int i = 0; i < this->nx; ++i) rdirect[i] += cg_alpha * cg_direct[i];
 
         // store residuals used in truncated conditions

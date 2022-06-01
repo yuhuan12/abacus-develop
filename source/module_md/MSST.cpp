@@ -10,6 +10,7 @@ MSST::MSST(MD_parameters& MD_para_in, UnitCell_pseudo &unit_in) : Verlet(MD_para
 {
     std::cout << "MSST" << std::endl;
 
+    GlobalV::CAL_STRESS = 1;
     mdp.msst_qmass = mdp.msst_qmass / pow(ModuleBase::ANGSTROM_AU, 4) / pow(ModuleBase::AU_to_MASS, 2);
     mdp.msst_vel = mdp.msst_vel * ModuleBase::ANGSTROM_AU * ModuleBase::AU_to_FS;
     mdp.msst_vis = mdp.msst_vis / ModuleBase::AU_to_MASS / ModuleBase::ANGSTROM_AU * ModuleBase::AU_to_FS;
@@ -38,17 +39,11 @@ void MSST::setup(ModuleESolver::ESolver *p_esolver)
     ModuleBase::TITLE("MSST", "setup");
     ModuleBase::timer::tick("MSST", "setup");
 
+    Verlet::setup(p_esolver);
+
     int sd = mdp.msst_direction;
 
-    MD_func::force_virial(p_esolver, step_, mdp, ucell, potential, force, virial);
-    MD_func::kinetic_stress(ucell, vel, allmass, kinetic, stress);
-    stress += virial;
-
-    if(mdp.md_restart)
-    {
-        restart();
-    }
-    else
+    if(!mdp.md_restart)
     {
         lag_pos = 0;
         v0 = ucell.omega;
@@ -83,7 +78,7 @@ void MSST::first_half()
 
     const int sd = mdp.msst_direction;
     const double dthalf = 0.5 * mdp.md_dt;
-
+    double vol;
     energy_ = potential + kinetic;
 
     // propagate the time derivative of volume 1/2 step
@@ -112,7 +107,7 @@ void MSST::first_half()
     propagate_vel();
 
     // propagate volume 1/2 step
-    double vol = ucell.omega + omega[sd] * dthalf;
+    vol = ucell.omega + omega[sd] * dthalf;
 
     // rescale positions and change box size
     rescale(vol);
@@ -122,6 +117,11 @@ void MSST::first_half()
     {
         pos[i] += vel[i] * mdp.md_dt;
     }
+#ifdef __MPI
+    MPI_Bcast(pos , ucell.nat*3,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Bcast(vel , ucell.nat*3,MPI_DOUBLE,0,MPI_COMM_WORLD);
+#endif
+
     ucell.update_pos_tau(pos);
     ucell.periodic_boundary_adjustment();
 
@@ -141,7 +141,6 @@ void MSST::second_half()
 
     const int sd = mdp.msst_direction;
     const double dthalf = 0.5 * mdp.md_dt;
-
     energy_ = potential + kinetic;
 
     // propagate velocities 1/2 step
@@ -160,9 +159,9 @@ void MSST::second_half()
     ModuleBase::timer::tick("MSST", "second_half");
 }
 
-void MSST::outputMD(std::ofstream &ofs)
+void MSST::outputMD(std::ofstream &ofs, bool cal_stress)
 {
-    Verlet::outputMD(ofs);
+    Verlet::outputMD(ofs, cal_stress);
 }
 
 void MSST::write_restart()

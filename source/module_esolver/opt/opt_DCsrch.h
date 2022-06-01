@@ -7,16 +7,15 @@
 // }
 
 // 
-// A interface of line seach code opt_DCsrch.c, which is downloaded from 
-// https://github.com/NanoComp/mpb/blob/master/src/matrices/minpack2-linmin.c .
+// A interface of line seach
 // 
 class Opt_DCsrch
 {
 public:
 	Opt_DCsrch()
 	{
-		this->isave = new int[2];
-    	this->dsave = new double[13];
+		this->isave = new int[3];
+    	this->dsave = new double[14];
 	}
 	~Opt_DCsrch()
 	{
@@ -72,9 +71,9 @@ public:
 	//        If task(1:5) = 'ERROR' then there is an error in the input arguments.
 	//  
 	void dcSrch(
-		double *f, 
-		double *g, 
-		double *rstp, 
+		double &f, 
+		double &g, 
+		double &rstp, 
 		char *rtask
 	);
 

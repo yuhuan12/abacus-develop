@@ -37,6 +37,7 @@ class Input
     std::string calculation; // "scf" : self consistent calculation.
                              // "nscf" : non-self consistent calculation.
                              // "relax" : cell relaxations
+                             // "ofdft" : orbital free dft calculations.
     double pseudo_rcut; // cut-off radius for calculating msh
     bool pseudo_mesh; // 0: use msh to normalize radial wave functions;  1: use mesh, which is used in QE.
     int ntype; // number of atom types
@@ -64,11 +65,11 @@ class Input
     // Stochastic DFT
     //==========================================================
     int nche_sto; // number of orders for Chebyshev expansion in stochastic DFT //qinarui 2021-2-5
+    int nbands_sto;			// number of stochastic bands //qianrui 2021-2-5
     int seed_sto; // random seed for sDFT
     double emax_sto; // Emax & Emin to normalize H
     double emin_sto;
-    std::string stotype;
-    int nbands_sto; // number of stochastic bands //qianrui 2021-2-5
+    int bndpar; //parallel for stochastic/deterministic bands
 
     //==========================================================
     // electrons / spin
@@ -179,9 +180,9 @@ class Input
     //==========================================================
     // charge mixing
     //==========================================================
-    std::string mixing_mode; // "plain","broden",...
+    std::string mixing_mode; // "plain","broyden",...
     double mixing_beta; // 0 : no_mixing
-    int mixing_ndim; // used in Broden method
+    int mixing_ndim; // used in Broyden method
     double mixing_gg0; // used in kerker method. mohan add 2014-09-27
 
     //==========================================================
@@ -197,13 +198,16 @@ class Input
     int mem_saver; // 1: save psi when nscf calculation.
 
     int printe; // mohan add 2011-03-16
-    int out_chg; // output charge density.
+    int out_freq_elec;  // the frequency ( >= 0) of electronic iter to output charge density and wavefunction. 0: output only when converged
+    int out_freq_ion;  // the frequency ( >= 0 ) of ionic step to output charge density and wavefunction. 0: output only when ion steps are finished
+    int out_chg; // output charge density. 0: no; 1: yes
     int out_dm; // output density matrix.
     int out_pot; // yes or no
     int out_wfc_pw; // 0: no; 1: txt; 2: dat
     int out_wfc_r; // 0: no; 1: yes
     int out_dos; // dos calculation. mohan add 20090909
     int out_band; // band calculation pengfei 2014-10-13
+    int out_proj_band; // projected band structure calculation jiyy add 2022-05-11
     int out_mat_hs; // output H matrix and S matrix in local basis.
     int out_mat_hs2; // LiuXh add 2019-07-16, output H(R) matrix and S(R) matrix in local basis.
     int out_mat_r; // jingan add 2019-8-14, output r(R) matrix.
@@ -251,6 +255,17 @@ class Input
         int md_fixtemperature;          //period to change temperature
         int md_msdstartTime;            //choose which step that msd be calculated */
     MD_parameters mdp;
+
+    //==========================================================
+    // efield and dipole correction
+    // Yu Liu add 2022-05-18
+    //==========================================================
+    bool efield_flag;        // add electric field
+    bool dip_cor_flag;        // dipole correction
+    int efield_dir;           // the direction of the electric field or dipole correction
+    double efield_pos_max;     // position of the maximum of the saw-like potential along crystal axis efield_dir
+    double efield_pos_dec;      // zone in the unit cell where the saw-like potential decreases
+    double efield_amp ;        // amplitude of the electric field
 
     //==========================================================
     // vdw
@@ -385,6 +400,20 @@ class Input
     double tau;
     double sigma_k;
     double nc_k;
+    // gauss charge
+    double comp_q;
+    double comp_l;
+    double comp_center;
+    int comp_dim;
+
+    //==========================================================
+    // OFDFT  sunliang added on 2022-05-05
+    //==========================================================
+    string of_kinetic; // Kinetic energy functional, such as TF, VW, WT
+    string of_method;  // optimization method, include cg1, cg2, tn (default), bfgs
+    string of_conv;    // select the convergence criterion, potential, energy (default), or both
+    double of_tole;    // tolerance of the energy change (in Ry) for determining the convergence, default=2e-6 Ry
+    double of_tolp;    // tolerance of potential for determining the convergence, default=1e-5 in a.u.
 
     //==========================================================
     // variables for test only

@@ -11,7 +11,8 @@ NP=8
 # Objects
 #==========================
 VPATH=../../../module_base\
-:../
+:../\
+:../../../src_parallel
 
 OPT_OBJS_0=global_function.o\
 tool_quit.o\
@@ -22,7 +23,7 @@ timer.o\
 opt_DCsrch.o\
 opt_CG.o\
 test_tools.o\
-
+parallel_reduce.o
 
 FILE=CG_test.exe\
 TN_test.exe

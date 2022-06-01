@@ -2,7 +2,7 @@
 #include <math.h>
 
 #include "../../module_base/global_function.h"
-
+#include "../../src_parallel/parallel_reduce.h"
 // 
 // A class designed to deal with optimization problems with CG method.
 // Three forms of CG methods have been implemented, including standard flow to solve 
@@ -25,6 +25,9 @@ public:
     void allocate(
         int nx // length of the solution array x
     );
+    void setPara(
+        double dV
+    );
     void refresh(
         int nx_new=0, // length of new x, default 0 means the length doesn't change
         double *pinp_b=NULL // new b in Ax = b, default NULL means we are dealing with general case
@@ -37,7 +40,8 @@ public:
     );
     double step_length(
         double *pAd, // Ad for Ax=b
-        double *pdirect // direct
+        double *pdirect, // direct
+        int &ifPD // if postive definit
     );
 
     double get_residual() {return sqrt(this->gg);};
@@ -49,6 +53,7 @@ public:
     // }
 
 private:
+    double dV = 1.;
     int nx = 0; // length of the sulotion array x
     int iter = 0; // number of iteration
     double gg = 1000; // gradient dot gradient
@@ -71,11 +76,11 @@ private:
     void HZ_beta(
         double *pgradient // df(x)/dx
     );
-    double inner_product(double *pa, double *pb, int length, double dV=1)
+    double inner_product(double *pa, double *pb, int length)
     {
         double innerproduct = 0.;
         for (int i = 0; i < length; ++i) innerproduct += pa[i] * pb[i];
-        innerproduct *= dV;
+        innerproduct *= this->dV;
         return innerproduct;
     }
 };

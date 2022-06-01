@@ -26,8 +26,8 @@ extern double PSEUDORCUT;
 extern bool PSEUDO_MESH;
 
 extern std::string CALCULATION; // 2 "scf";"nscf" ;"symmetry"
-extern int EFIELD; // 5 add electric field
-extern int DIPOLE; // 7 add dipole correction
+extern int EFIELD_FLAG; // 5 add electric field
+extern int DIP_COR_FLAG; // 7 add dipole correction
 
 extern std::string DFT_FUNCTIONAL; // 6.5 change the DFT functional from input file.
 extern int NSPIN; // 7
@@ -44,6 +44,8 @@ extern double PRESS3;
 extern double PRESSURE;
 extern std::string RELAX_METHOD;
 extern std::string OUT_LEVEL;
+extern int OUT_FREQ_ELEC;
+extern int OUT_FREQ_ION;
 
 extern int RELAX_NMAX; // 8.3
 extern int SCF_NMAX; // 8.4
@@ -114,10 +116,14 @@ extern int out_mul; // qifeng add 2019/9/10
 //========================================================================
 extern int NPROC;
 extern int KPAR;
+extern int NSTOGROUP;
 extern int MY_RANK;
 extern int MY_POOL;
+extern int MY_STOGROUP;
 extern int NPROC_IN_POOL;
+extern int NPROC_IN_STOGROUP;
 extern int RANK_IN_POOL;
+extern int RANK_IN_STOGROUP;
 extern int DRANK;
 extern int DSIZE;
 extern int DCOLOR;
@@ -147,6 +153,7 @@ extern std::string global_pseudo_type; // mohan add 2013-05-20 (xiaohui add 2013
 extern std::string global_out_dir;
 extern std::string global_orbital_dir; // liuyu add 2021-08-14
 extern std::string global_readin_dir; // zhengdy modified
+extern std::string global_stru_dir;   // liuyu add 2022-05-24 for MD STRU
 
 extern std::ofstream ofs_running;
 extern std::ofstream ofs_warning;
@@ -223,5 +230,13 @@ extern double eb_k;
 extern double tau;
 extern double sigma_k;
 extern double nc_k;
+
+// ofdft sunliang add on 2022-05-11
+extern std::string of_kinetic; // Kinetic energy functional, such as TF, VW, WT
+extern std::string of_method;  // optimization method, include cg1, cg2, tn (default), bfgs
+extern std::string of_conv;    // select the convergence criterion, potential, energy (default), or both
+extern double of_tole;    // tolerance of the energy change (in Ry) for determining the convergence, default=2e-6 Ry
+extern double of_tolp;    // tolerance of potential for determining the convergence, default=1e-5 in a.u.
+
 } // namespace GlobalV
 #endif

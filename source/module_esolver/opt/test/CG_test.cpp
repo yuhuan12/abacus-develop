@@ -57,7 +57,8 @@ protected:
         {
             cg.next_direct(Ap, 0, p);
             tools.le.get_Ap(tools.le.A, p, Ap);
-            step = cg.step_length(Ap, p);
+            int ifPD = 0;
+            step = cg.step_length(Ap, p, ifPD);
             for (int i = 0; i < 3; ++i) x[i] += step * p[i]; 
             residual = cg.get_residual();
             if (residual < tol) 
@@ -113,7 +114,7 @@ protected:
             {
                 f = tools.func(temp_x, func_label);
                 g = tools.dfuncdstp(temp_x, p, func_label);
-                ds.dcSrch(&f, &g, &step, task);
+                ds.dcSrch(f, g, step, task);
                 if (task[0] == 'F' && task[1] == 'G')
                 {
                     for (int j = 0; j < 3; ++j) temp_x[j] = x[j] + step * p[j];
