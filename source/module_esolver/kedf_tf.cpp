@@ -26,7 +26,7 @@ void KEDF_TF::set_para(int nx, double dV)
 // 
 // Etf = cTF * \int{dr rho^{5/3}}
 // 
-double KEDF_TF::get_energy(double **prho)
+double KEDF_TF::get_energy(const double * const *prho)
 {
     double energy = 0.; // in Ry
     if (GlobalV::NSPIN == 1)
@@ -83,6 +83,9 @@ void KEDF_TF::tf_potential(const double * const *prho)
             }
         }
     }
+
+    this->get_energy(prho);
+
     ModuleBase::timer::tick("KEDF_TF", "tf_potential");
 }
 
