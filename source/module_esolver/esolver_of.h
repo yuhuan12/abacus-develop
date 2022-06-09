@@ -93,6 +93,7 @@ public:
 private:
     KEDF_TF tf;
     KEDF_vW vw;
+    KEDF_WT wt;
 
     Opt_CG opt_cg;
     Opt_TN opt_tn;

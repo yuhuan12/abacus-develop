@@ -93,8 +93,7 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &ucell)
     this->nrxx = this->pw_rho->nrxx;
     // this->nrxx = GlobalC::rhopw->nrxx;
     this->dV = ucell.omega / GlobalC::rhopw->nxyz; // volume of one point !!! MAYBE WRONG !!!
-    this->tf.set_para(this->nrxx, this->dV);
-    this->vw.set_para(this->nrxx, this->dV);
+
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
     // delete[] this->pdLdphi;
     // delete[] this->pdirect;
@@ -280,6 +279,10 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &ucell)
     {
         this->theta[0] = 0.2;
     }
+
+    this->tf.set_para(this->nrxx, this->dV);
+    this->vw.set_para(this->nrxx, this->dV);
+    this->wt.set_para(this->nrxx, this->dV, this->nelec[0], 1., 1., 1., this->pw_rho);
 }
 
 void ESolver_OF::Run(int istep, UnitCell_pseudo& ucell)
@@ -934,21 +937,27 @@ void ESolver_OF::kineticPotential(double **prho, double **pphiInpt, double **rpo
     }
     else if (this->of_kinetic == "vw")
     {
-        // cout  << setprecision(20) << "RHO   " << prho[0][0] << "  phi2   " << pphiInpt[0][0] * pphiInpt[0][0] << endl;
         this->vw.vW_potential(pphiInpt, this->pw_rho);
         for (int is = 0; is < GlobalV::NSPIN; ++is)
         {
             for (int ir = 0; ir < this->nrxx; ++ir)
             {
-                // if(ir > 20) assert(prho[is][ir] == pphiInpt[is][ir] * pphiInpt[is][ir]);
-                // if (ir > 100) exit(0);
                 rpot[is][ir] = this->vw.potential[is][ir];
             }
         }
     }
     else if (this->of_kinetic == "wt")
     {
-        // 
+        this->tf.tf_potential(prho);
+        this->vw.vW_potential(pphiInpt, this->pw_rho);
+        this->wt.WT_potential(prho, this->pw_rho);
+        for (int is = 0; is < GlobalV::NSPIN; ++is)
+        {
+            for (int ir = 0; ir < this->nrxx; ++ir)
+            {
+                rpot[is][ir] = this->tf.potential[is][ir] + this->vw.potential[is][ir] + this->wt.potential[is][ir];
+            }
+        }
     }
 }
 
@@ -965,7 +974,7 @@ double ESolver_OF::kineticEnergy()
     }
     else if (this->of_kinetic == "wt")
     {
-        // 
+        kinetic += this->tf.TFenergy + this->vw.vWenergy + this->wt.WTenergy;
     }
     return kinetic;
 }

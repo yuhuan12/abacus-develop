@@ -28,11 +28,11 @@ public:
 
     void set_para(int nx, double dV);
 
-    double get_energy(double **pphi);
-    double get_energy_density(double **pphi, int is, int ir);
+    double get_energy(double **pphi, ModulePW::PW_Basis *pw_rho);
+    double get_energy_density(double **pphi, int is, int ir, ModulePW::PW_Basis *pw_rho);
     void vW_potential(const double * const * pphi, ModulePW::PW_Basis *pw_rho);
     void get_stress(double cellVol, double inpt_vWenergy=-1);
-
+    void laplacianPhi(const double * const * pphi, double **rLapPhi, ModulePW::PW_Basis *pw_rho);
 
     // int NSPIN = 1;
     int nx = 0;

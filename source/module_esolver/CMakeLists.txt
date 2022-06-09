@@ -13,6 +13,7 @@ add_library(
     esolver_of.cpp
     kedf_tf.cpp
     kedf_vw.cpp
+    kedf_wt.cpp
 )
 
 
