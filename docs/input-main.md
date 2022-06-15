@@ -1510,13 +1510,13 @@ This part of variables are used to control berry phase and wannier90 interfacae 
 
 - **Type**: Double
 - **Description**:parameter alpha of WT KEDF
-- **Default**: $(5+\sqrt(5)/6$
+- **Default**: $5/6$
 
 #### of_wt_beta
 
 - **Type**: Double
 - **Description**:parameter beta of WT KEDF
-- **Default**: $(5-\sqrt(5)/6$
+- **Default**: $5/6$
 
 ### Variables useful for debugging
 

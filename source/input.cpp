@@ -435,8 +435,8 @@ void Input::Default(void)
     of_tolp = 1e-5;
     of_tf_weight = 1.;
     of_vw_weight = 1.;
-    of_wt_alpha = (5. + sqrt(5.))/6.;
-    of_wt_beta = (5. - sqrt(5.))/6.;
+    of_wt_alpha = 5./6.;
+    of_wt_beta = 5./6.;
 
     return;
 }
