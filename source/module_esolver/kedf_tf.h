@@ -16,7 +16,7 @@ public:
     {
     }
 
-    void set_para(int nx, double dV);
+    void set_para(int nx, double dV, double tf_weight);
 
     double get_energy(const double * const *prho);
     double get_energy_density(double **prho, int is, int ir);
@@ -25,6 +25,7 @@ public:
 
     int nx = 0;
     double dV = 0.;
+    double tf_weight = 1.;
     const double cTF = 3.0/10.0 * pow(3*pow(M_PI, 2.0), 2.0/3.0) * 2; // 10/3*(3*pi^2)^{2/3}, multiply by 2 to convert unit from Hartree to Ry, finally in Ry*Bohr^(-2)
     double TFenergy = 0.;
     ModuleBase::matrix stress;

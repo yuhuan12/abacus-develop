@@ -2,10 +2,11 @@
 #include <iostream>
 #include "../src_parallel/parallel_reduce.h"
 
-void KEDF_vW::set_para(int nx, double dV)
+void KEDF_vW::set_para(int nx, double dV, double vw_weight)
 {
     this->nx = nx;
     this->dV = dV;
+    this->vw_weight = vw_weight;
 }
 
 // 
@@ -24,7 +25,7 @@ double KEDF_vW::get_energy(double **pphi, ModulePW::PW_Basis *pw_rho)
         {
             energy += pphi[0][ir] * LapPhi[0][ir];
         }
-        energy *= this->dV * 0.5;
+        energy *= this->dV * 0.5 * this->vw_weight;
     }
     else if (GlobalV::NSPIN == 2)
     {
@@ -35,7 +36,7 @@ double KEDF_vW::get_energy(double **pphi, ModulePW::PW_Basis *pw_rho)
                 energy += 2 * pphi[is][ir] * LapPhi[is][ir];
             }
         }
-        energy *= 0.5 * this->dV * 0.5;
+        energy *= 0.5 * this->dV * 0.5 * this->vw_weight;
     }
     this->vWenergy = energy;
     Parallel_Reduce::reduce_double_all(this->vWenergy);
@@ -56,7 +57,7 @@ double KEDF_vW::get_energy_density(double **pphi, int is, int ir, ModulePW::PW_B
     this->laplacianPhi(pphi, LapPhi, pw_rho);
 
     double energyDen = 0.; // in Ry
-    energyDen = 0.5 * pphi[is][ir] * LapPhi[is][ir];
+    energyDen = 0.5 * pphi[is][ir] * LapPhi[is][ir] * this->vw_weight;
 
     for (int is = 0; is < GlobalV::NSPIN; ++is)
     {
@@ -81,7 +82,7 @@ void KEDF_vW::vW_potential(const double * const *pphi, ModulePW::PW_Basis *pw_rh
     {
         for (int ir = 0; ir < this->nx; ++ir)
         {
-            rpotential(is, ir) += 0.5 * LapPhi[is][ir] / pphi[is][ir];
+            rpotential(is, ir) += 0.5 * LapPhi[is][ir] / pphi[is][ir] * this->vw_weight;
         }
     }
 
@@ -93,7 +94,7 @@ void KEDF_vW::vW_potential(const double * const *pphi, ModulePW::PW_Basis *pw_rh
         {
             energy += pphi[0][ir] * LapPhi[0][ir];
         }
-        energy *= this->dV * 0.5;
+        energy *= this->dV * 0.5 * this->vw_weight;
     }
     else if (GlobalV::NSPIN == 2)
     {
@@ -104,7 +105,7 @@ void KEDF_vW::vW_potential(const double * const *pphi, ModulePW::PW_Basis *pw_rh
                 energy += 2 * pphi[is][ir] * LapPhi[is][ir];
             }
         }
-        energy *= 0.5 * this->dV * 0.5;
+        energy *= 0.5 * this->dV * 0.5 * this->vw_weight;
     }
     this->vWenergy = energy;
     Parallel_Reduce::reduce_double_all(this->vWenergy);

@@ -239,6 +239,10 @@ extern std::string of_method;  // optimization method, include cg1, cg2, tn (def
 extern std::string of_conv;    // select the convergence criterion, potential, energy (default), or both
 extern double of_tole;    // tolerance of the energy change (in Ry) for determining the convergence, default=2e-6 Ry
 extern double of_tolp;    // tolerance of potential for determining the convergence, default=1e-5 in a.u.
+extern double of_tf_weight;  // weight of TF KEDF
+extern double of_vw_weight;  // weight of vW KEDF
+extern double of_wt_alpha;   // parameter alpha of WT KEDF
+extern double of_wt_beta;    // parameter beta of WT KEDF
 
 } // namespace GlobalV
 #endif

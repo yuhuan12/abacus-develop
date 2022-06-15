@@ -280,9 +280,9 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &ucell)
         this->theta[0] = 0.2;
     }
 
-    this->tf.set_para(this->nrxx, this->dV);
-    this->vw.set_para(this->nrxx, this->dV);
-    this->wt.set_para(this->nrxx, this->dV, this->nelec[0], 1., 1., 1., this->pw_rho);
+    this->tf.set_para(this->nrxx, this->dV, GlobalV::of_tf_weight);
+    this->vw.set_para(this->nrxx, this->dV, GlobalV::of_vw_weight);
+    this->wt.set_para(this->nrxx, this->dV, GlobalV::of_wt_alpha, GlobalV::of_wt_beta, this->nelec[0], GlobalV::of_tf_weight, GlobalV::of_vw_weight, this->pw_rho);
 }
 
 void ESolver_OF::Run(int istep, UnitCell_pseudo& ucell)
@@ -929,6 +929,11 @@ void ESolver_OF::kineticPotential(double **prho, double **pphiInpt, ModuleBase::
         this->vw.vW_potential(pphiInpt, this->pw_rho, rpot);
         this->wt.WT_potential(prho, this->pw_rho, rpot);
     }
+    else if (this->of_kinetic == "tf+")
+    {
+        this->tf.tf_potential(prho, rpot);
+        this->vw.vW_potential(pphiInpt, this->pw_rho, rpot);
+    }
 }
 
 double ESolver_OF::kineticEnergy()
@@ -945,6 +950,10 @@ double ESolver_OF::kineticEnergy()
     else if (this->of_kinetic == "wt")
     {
         kinetic += this->tf.TFenergy + this->vw.vWenergy + this->wt.WTenergy;
+    }
+    else if (this->of_kinetic == "tf+")
+    {
+        kinetic += this->tf.TFenergy + this->vw.vWenergy;
     }
     return kinetic;
 }

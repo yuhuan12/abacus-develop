@@ -2,17 +2,18 @@
 #include <iostream>
 #include "../src_parallel/parallel_reduce.h"
 
-void KEDF_WT::set_para(int nx, double dV, double nelec, double weightWT, double weightTF, double weightVW, ModulePW::PW_Basis *pw_rho)
+void KEDF_WT::set_para(int nx, double dV, double alpha, double beta, double nelec, double tf_weight, double vw_weight, ModulePW::PW_Basis *pw_rho)
 {
     this->nx = nx;
     this->dV = dV;
-    this->weightWT = weightWT;
+    // this->weightWT = weightWT;
+    this->alpha = alpha;
+    this->beta = beta;
 
     double rho0 = 1./(pw_rho->nxyz * dV) * nelec;
     this->tkF = 2. * pow(3. * pow(ModuleBase::PI, 2) * rho0, 1./3.);
 
     double coef = 5./(9. * this->alpha * this->beta * pow(rho0, this->alpha + this->beta - 5./3.));
-    cout << "coef    " << coef << endl;
 
     if (this->kernel != NULL) delete[] this->kernel;
     this->kernel = new double[pw_rho->npw];
@@ -20,12 +21,12 @@ void KEDF_WT::set_para(int nx, double dV, double nelec, double weightWT, double 
     for (int ip = 0; ip < pw_rho->npw; ++ip)
     {
         eta = sqrt(pw_rho->gg[ip]) * pw_rho->tpiba / this->tkF;
-        this->kernel[ip] = this->WTkernel(eta, weightTF, weightVW) * coef;
+        this->kernel[ip] = this->WTkernel(eta, tf_weight, vw_weight) * coef;
     }
     for (int i = 0; i < 10000; ++i)
     {
         double eta = 0.0005*i;
-        GlobalV::ofs_warning << eta << "    " << this->WTkernel(eta, weightTF, weightVW) << endl; 
+        GlobalV::ofs_warning << eta << "    " << this->WTkernel(eta, tf_weight, vw_weight) << endl; 
     }
 }
 
@@ -45,7 +46,7 @@ double KEDF_WT::get_energy(const double * const * prho, ModulePW::PW_Basis *pw_r
         {
             energy += pow(prho[0][ir], this->alpha) * kernelRhoBeta[0][ir];
         }
-        energy *= this->dV * this->cTF * this->weightWT;
+        energy *= this->dV * this->cTF;
     }
     else if (GlobalV::NSPIN == 2)
     {
@@ -81,7 +82,7 @@ double KEDF_WT::get_energy_density(double **prho, int is, int ir, ModulePW::PW_B
         delete[] kernelRhoBeta[is];
     }
     delete[] kernelRhoBeta;
-    return this->cTF * this->weightWT * (prho[is][ir], this->alpha) * kernelRhoBeta[is][ir];
+    return this->cTF * (prho[is][ir], this->alpha) * kernelRhoBeta[is][ir];
 }
 
 
@@ -104,7 +105,7 @@ void KEDF_WT::WT_potential(const double * const *prho, ModulePW::PW_Basis *pw_rh
     {
         for (int ir = 0; ir < this->nx; ++ir)
         {
-            rpotential(is, ir) += this->cTF * this->weightWT * 
+            rpotential(is, ir) += this->cTF * 
                                     (this->alpha * pow(prho[is][ir], this->alpha-1.) * kernelRhoBeta[is][ir]
                                     + this->beta *pow(prho[is][ir], this->beta-1.) * kernelRhoAlpha[is][ir]);
         }
@@ -118,7 +119,7 @@ void KEDF_WT::WT_potential(const double * const *prho, ModulePW::PW_Basis *pw_rh
         {
             energy += pow(prho[0][ir], this->alpha) * kernelRhoBeta[0][ir];
         }
-        energy *= this->dV * this->cTF * this->weightWT;
+        energy *= this->dV * this->cTF;
     }
     else if (GlobalV::NSPIN == 2)
     {
@@ -149,7 +150,7 @@ void KEDF_WT::get_stress(double cellVol, double inpt_vWenergy)
     // waiting ...
 }
 
-double KEDF_WT::WTkernel(double eta, double weightTF, double weightVW)
+double KEDF_WT::WTkernel(double eta, double tf_weight, double vw_weight)
 {
     if (eta < 0.) 
     {
@@ -158,20 +159,20 @@ double KEDF_WT::WTkernel(double eta, double weightTF, double weightVW)
     // limit for small eta
     else if (eta < 1e-10)
     {
-        return 1. - weightTF + eta * eta * (1./3. - 3. * weightVW);
+        return 1. - tf_weight + eta * eta * (1./3. - 3. * vw_weight);
     }
     // around the singularity
     else if (abs(eta - 1.) < 1e-10)
     {
-        return 2. - weightTF - 3. * weightVW + 20. * (eta - 1);
+        return 2. - tf_weight - 3. * vw_weight + 20. * (eta - 1);
     }
     // Taylor expansion for high eta
     else if (eta > 3.65)
     {
         double eta2 = eta * eta;
         double invEta2 = 1. / eta2;
-        double LindG = 3. * (1. - weightVW) * eta2 
-                        -weightTF-0.6 
+        double LindG = 3. * (1. - vw_weight) * eta2 
+                        -tf_weight-0.6 
                         + invEta2 * (-0.13714285714285712 
                         + invEta2 * (-6.39999999999999875E-2
                         + invEta2 * (-3.77825602968460128E-2
@@ -192,7 +193,7 @@ double KEDF_WT::WTkernel(double eta, double weightTF, double weightVW)
     else
     {
         return 1. / (0.5 + 0.25 * (1. - eta * eta) / eta * log((1 + eta)/abs(1 - eta)))
-                 - 3. * weightVW * eta * eta - weightTF;
+                 - 3. * vw_weight * eta * eta - tf_weight;
     }
 }
 

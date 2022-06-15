@@ -211,4 +211,8 @@ std::string of_method = "tn";
 std::string of_conv = "energy";
 double of_tole = 2e-6;
 double of_tolp = 1e-5;
+double of_tf_weight = 1.;
+double of_vw_weight = 1.;
+double of_wt_alpha = 5./6.;  
+double of_wt_beta = 5./6.;
 } // namespace GlobalV

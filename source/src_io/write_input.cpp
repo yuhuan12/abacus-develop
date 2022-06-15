@@ -336,6 +336,18 @@ void Input::Print(const std::string &fn) const
     ModuleBase::GlobalFunc::OUTP(ofs, "comp_l", comp_l, " total length of compensating charge");
     ModuleBase::GlobalFunc::OUTP(ofs, "comp_center", comp_center, " center of compensating charge on dim");
     ModuleBase::GlobalFunc::OUTP(ofs, "comp_dim", comp_dim, " dimension of compensating charge(x, y or z)");
+
+    ofs << "\n#Parameters (19.orbital free density functional theory)" << std::endl;
+    ModuleBase::GlobalFunc::OUTP(ofs, "of_kinetic", of_kinetic, "kinetic energy functional, such as tf, vw, wt");
+    ModuleBase::GlobalFunc::OUTP(ofs, "of_method", of_method, "optimization method used in OFDFT, including cg1, cg2, tn (default)");
+    ModuleBase::GlobalFunc::OUTP(ofs, "of_conv", of_conv, "the convergence criterion, potential, energy (default), or both");
+    ModuleBase::GlobalFunc::OUTP(ofs, "of_tole", of_tole, "tolerance of the energy change (in Ry) for determining the convergence, default=2e-6 Ry");
+    ModuleBase::GlobalFunc::OUTP(ofs, "of_tolp", of_tolp, "tolerance of potential for determining the convergence, default=1e-5 in a.u.");
+    ModuleBase::GlobalFunc::OUTP(ofs, "of_tf_weight", of_tf_weight, "weight of TF KEDF");
+    ModuleBase::GlobalFunc::OUTP(ofs, "of_vw_weight", of_vw_weight, "weight of vW KEDF");
+    ModuleBase::GlobalFunc::OUTP(ofs, "of_wt_alpha", of_wt_alpha, "parameter alpha of WT KEDF");
+    ModuleBase::GlobalFunc::OUTP(ofs, "of_wt_beta", of_wt_beta, "parameter beta of WT KEDF");
+
     ofs.close();
     return;
 }

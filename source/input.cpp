@@ -428,11 +428,15 @@ void Input::Default(void)
     //==========================================================
     //    OFDFT sunliang added on 2022-05-05
     //==========================================================
-    of_kinetic = "WT";
+    of_kinetic = "wt";
     of_method = "tn";
     of_conv = "energy";
     of_tole = 1e-6;
     of_tolp = 1e-5;
+    of_tf_weight = 1.;
+    of_vw_weight = 1.;
+    of_wt_alpha = (5. + sqrt(5.))/6.;
+    of_wt_beta = (5. - sqrt(5.))/6.;
 
     return;
 }
@@ -1546,6 +1550,22 @@ bool Input::Read(const std::string &fn)
         {
             read_value(ifs, of_tolp);
         }
+        else if (strcmp("of_tf_weight", word) == 0)
+        {
+            read_value(ifs, of_tf_weight);
+        }
+        else if (strcmp("of_vw_weight", word) == 0)
+        {
+            read_value(ifs, of_vw_weight);
+        }
+        else if (strcmp("of_wt_alpha", word) == 0)
+        {
+            read_value(ifs, of_wt_alpha);
+        }
+        else if (strcmp("of_wt_beta", word) == 0)
+        {
+            read_value(ifs, of_wt_beta);
+        }
         //----------------------------------------------------------------------------------
         else
         {
@@ -2223,6 +2243,10 @@ void Input::Bcast()
     Parallel_Common::bcast_string(of_conv);
     Parallel_Common::bcast_double(of_tole);
     Parallel_Common::bcast_double(of_tolp);
+    Parallel_Common::bcast_double(of_tf_weight);
+    Parallel_Common::bcast_double(of_vw_weight);
+    Parallel_Common::bcast_double(of_wt_alpha);
+    Parallel_Common::bcast_double(of_wt_beta);
 
     return;
 }

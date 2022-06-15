@@ -507,5 +507,9 @@ void Input_Conv::Convert(void)
     GlobalV::of_conv = INPUT.of_conv;
     GlobalV::of_tole = INPUT.of_tole;
     GlobalV::of_tolp = INPUT.of_tolp;
+    GlobalV::of_tf_weight = INPUT.of_tf_weight;
+    GlobalV::of_vw_weight = INPUT.of_vw_weight;
+    GlobalV::of_wt_alpha = INPUT.of_wt_alpha;
+    GlobalV::of_wt_beta = INPUT.of_wt_beta;
     return;
 }

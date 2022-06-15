@@ -3,10 +3,11 @@
 #include "../src_parallel/parallel_reduce.h"
 
 
-void KEDF_TF::set_para(int nx, double dV)
+void KEDF_TF::set_para(int nx, double dV, double tf_weight)
 {
     this->nx = nx;
     this->dV = dV;
+    this->tf_weight = tf_weight;
 }
 
 // 
@@ -32,7 +33,7 @@ double KEDF_TF::get_energy(const double * const *prho)
                 energy += pow(2. * prho[is][ir], 5./3.);
             }
         }
-        energy *= 0.5 * this->dV * this->cTF;
+        energy *= 0.5 * this->dV * this->cTF * this->tf_weight;
     }
     this->TFenergy = energy;
     Parallel_Reduce::reduce_double_all(this->TFenergy);
@@ -42,7 +43,7 @@ double KEDF_TF::get_energy(const double * const *prho)
 double KEDF_TF::get_energy_density(double **prho, int is, int ir)
 {
     double energyDen = 0.; // in Ry
-    energyDen = this->cTF * pow(prho[is][ir], 5./3.);
+    energyDen = this->cTF * pow(prho[is][ir], 5./3.) * this->tf_weight;
     return energyDen;
 }
 
@@ -56,7 +57,7 @@ void KEDF_TF::tf_potential(const double * const *prho, ModuleBase::matrix &rpote
     {
         for (int ir = 0; ir < this->nx; ++ir)
         {
-            rpotential(0, ir) += 5.0/3.0 * this->cTF * pow(prho[0][ir], 2./3.);
+            rpotential(0, ir) += 5.0/3.0 * this->cTF * pow(prho[0][ir], 2./3.) * this->tf_weight;
         }
     }
     else if (GlobalV::NSPIN == 2)
@@ -65,7 +66,7 @@ void KEDF_TF::tf_potential(const double * const *prho, ModuleBase::matrix &rpote
         {
             for (int ir = 0; ir < this->nx; ++ir)
             {
-                rpotential(is, ir) += 5.0/3.0 * this->cTF * pow(2. * prho[is][ir], 2./3.);
+                rpotential(is, ir) += 5.0/3.0 * this->cTF * pow(2. * prho[is][ir], 2./3.) * this->tf_weight;
             }
         }
     }
