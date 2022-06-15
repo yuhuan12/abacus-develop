@@ -155,7 +155,7 @@ private:
         return innerproduct;
     }
 
-    void kineticPotential(double **prho, double **pphi, double **rpot);
+    void kineticPotential(double **prho, double **pphi, ModuleBase::matrix &rpot);
     double kineticEnergy();
 };
 }
