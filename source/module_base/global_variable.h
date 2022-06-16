@@ -243,6 +243,8 @@ extern double of_tf_weight;  // weight of TF KEDF
 extern double of_vw_weight;  // weight of vW KEDF
 extern double of_wt_alpha;   // parameter alpha of WT KEDF
 extern double of_wt_beta;    // parameter beta of WT KEDF
+extern double of_wt_rho0;    // set the average density of system, in Bohr^-3
+extern bool of_hold_rho0;  // If set to 1, the rho0 will be fixed even if the volume of system has changed, it will be set to 1 automaticly if of_wt_rho0 is not zero.
 
 } // namespace GlobalV
 #endif

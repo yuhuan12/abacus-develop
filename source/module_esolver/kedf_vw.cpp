@@ -119,9 +119,56 @@ void KEDF_vW::vW_potential(const double * const *pphi, ModulePW::PW_Basis *pw_rh
     ModuleBase::timer::tick("KEDF_vW", "vw_potential");
 }
 
-void KEDF_vW::get_stress(double cellVol, double inpt_vWenergy)
+void KEDF_vW::get_stress(const double * const * pphi, ModulePW::PW_Basis *pw_rho, double inpt_vWenergy)
 {
-    // waiting ...
+    std::complex<double> **recipPhi = new std::complex<double> *[GlobalV::NSPIN];
+    std::complex<double> **ggrecipPhi = new std::complex<double> *[GlobalV::NSPIN];
+    for (int is = 0; is < GlobalV::NSPIN; ++is)
+    {
+        recipPhi[is] = new std::complex<double>[pw_rho->npw];
+        ggrecipPhi[is] = new std::complex<double>[pw_rho->npw];
+
+        pw_rho->real2recip(pphi[is], recipPhi[is]);
+    }
+
+    double *ggPhi = new double[this->nx];
+
+    for (int alpha = 0; alpha < 3; ++alpha)
+    {
+        for (int beta = alpha; beta < 3; ++beta)
+        {
+            this->stress(alpha, beta) = 0;
+            for (int is = 0; is < GlobalV::NSPIN; ++is)
+            {
+                for (int ik = 0; ik < pw_rho->npw; ++ik)
+                {
+                    ggrecipPhi[is][ik] = - recipPhi[is][ik] * pw_rho->gcar[ik][alpha] * pw_rho->gcar[ik][beta] * pw_rho->tpiba2;
+                }
+                pw_rho->recip2real(ggrecipPhi[is], ggPhi);
+                for (int ir = 0; ir < this->nx; ++ir)
+                {
+                    this->stress(alpha, beta) += pphi[is][ir] * ggPhi[ir];
+                }
+            }
+            Parallel_Reduce::reduce_double_all(this->stress(alpha, beta));
+            this->stress(alpha, beta) *= -1. * this->vw_weight / pw_rho->nxyz * 2; // convert Hartree to Ry 
+        }
+    }
+    for (int alpha = 1; alpha < 3; ++alpha)
+    {
+        for (int beta = 0; beta < alpha; ++beta)
+        {
+            this->stress(alpha, beta) = this->stress(beta, alpha);
+        }
+    }
+    for (int is = 0; is < GlobalV::NSPIN; ++is)
+    {
+        delete[] recipPhi[is];
+        delete[] ggrecipPhi[is];
+    }
+    delete[] recipPhi;
+    delete[] ggrecipPhi;
+    delete[] ggPhi;
 }
 
 void KEDF_vW::laplacianPhi(const double * const * pphi, double **rLapPhi, ModulePW::PW_Basis *pw_rho)
@@ -134,7 +181,7 @@ void KEDF_vW::laplacianPhi(const double * const * pphi, double **rLapPhi, Module
         pw_rho->real2recip(pphi[is], recipPhi[is]);
         for (int ik = 0; ik < pw_rho->npw; ++ik)
         {
-            recipPhi[is][ik] *= pw_rho->gg[ik] * pw_rho->tpiba2 * 2; // mutiply by 2 to convert Hartree to Ry
+            recipPhi[is][ik] *= pw_rho->gg[ik] * pw_rho->tpiba2 * 2.; // mutiply by 2 to convert Hartree to Ry
         }
         pw_rho->recip2real(recipPhi[is], rLapPhi[is]);
     }

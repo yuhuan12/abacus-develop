@@ -19,17 +19,20 @@ public:
         if (this->kernel != NULL) delete[] this->kernel;
     }
 
-    void set_para(int nx, double dV, double alpha, double beta, double nelec, double weightTF, double weightVW, ModulePW::PW_Basis *pw_rho);
+    void set_para(int nx, double dV, double alpha, double beta, double nelec, double tf_weight, double vw_weight, ModulePW::PW_Basis *pw_rho);
 
     double get_energy(const double * const * prho, ModulePW::PW_Basis *pw_rho);
     double get_energy_density(double **prho, int is, int ir, ModulePW::PW_Basis *pw_rho);
     void WT_potential(const double * const * prho, ModulePW::PW_Basis *pw_rho, ModuleBase::matrix &rpotential);
-    void get_stress(double cellVol, double inpt_vWenergy=-1);
-    double WTkernel(double eta, double weightTF, double weightVW);
+    void get_stress(double cellVol, const double * const * prho, ModulePW::PW_Basis *pw_rho, double vw_weight);
+    double WTkernel(double eta, double tf_weight, double vw_weight);
+    double diffLinhard(double eta, double vw_weight);
     void multiKernel(const double * const * prho, double **rkernelRho, double exponent, ModulePW::PW_Basis *pw_rho);
 
     int nx = 0;
     double dV = 0.;
+    double rho0 = 0.;
+    double kF = 0.;
     double tkF = 0.;
     double alpha = 5./6.;
     double beta = 5./6.;

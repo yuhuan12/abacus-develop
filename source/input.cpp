@@ -437,6 +437,8 @@ void Input::Default(void)
     of_vw_weight = 1.;
     of_wt_alpha = 5./6.;
     of_wt_beta = 5./6.;
+    of_wt_rho0 = 0.;
+    of_hold_rho0 = false;
 
     return;
 }
@@ -1566,6 +1568,14 @@ bool Input::Read(const std::string &fn)
         {
             read_value(ifs, of_wt_beta);
         }
+        else if (strcmp("of_wt_rho0", word) == 0)
+        {
+            read_value(ifs, of_wt_rho0);
+        }
+        else if (strcmp("of_hold_rho0", word) == 0)
+        {
+            read_value(ifs, of_hold_rho0);
+        }
         //----------------------------------------------------------------------------------
         else
         {
@@ -2247,6 +2257,8 @@ void Input::Bcast()
     Parallel_Common::bcast_double(of_vw_weight);
     Parallel_Common::bcast_double(of_wt_alpha);
     Parallel_Common::bcast_double(of_wt_beta);
+    Parallel_Common::bcast_double(of_wt_rho0);
+    Parallel_Common::bcast_bool(of_hold_rho0);
 
     return;
 }
@@ -2477,6 +2489,10 @@ void Input::Check(void)
         if (pseudo_type != "blps")
         {
             ModuleBase::WARNING_QUIT("Input::Check", "pseudo_type in ofdft should be set as blps");
+        }
+        if (of_wt_rho0 != 0.)
+        {
+            of_hold_rho0 = true;
         }
     }
     else

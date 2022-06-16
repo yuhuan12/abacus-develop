@@ -511,5 +511,7 @@ void Input_Conv::Convert(void)
     GlobalV::of_vw_weight = INPUT.of_vw_weight;
     GlobalV::of_wt_alpha = INPUT.of_wt_alpha;
     GlobalV::of_wt_beta = INPUT.of_wt_beta;
+    GlobalV::of_wt_rho0 = INPUT.of_wt_rho0;
+    GlobalV::of_hold_rho0 = INPUT.of_hold_rho0;
     return;
 }

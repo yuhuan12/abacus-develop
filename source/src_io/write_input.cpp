@@ -347,6 +347,8 @@ void Input::Print(const std::string &fn) const
     ModuleBase::GlobalFunc::OUTP(ofs, "of_vw_weight", of_vw_weight, "weight of vW KEDF");
     ModuleBase::GlobalFunc::OUTP(ofs, "of_wt_alpha", of_wt_alpha, "parameter alpha of WT KEDF");
     ModuleBase::GlobalFunc::OUTP(ofs, "of_wt_beta", of_wt_beta, "parameter beta of WT KEDF");
+    ModuleBase::GlobalFunc::OUTP(ofs, "of_wt_rho0", of_wt_rho0, "the average density of system, used in WT KEDF, in Bohr^-3");
+    ModuleBase::GlobalFunc::OUTP(ofs, "of_hold_rho0", of_hold_rho0, "If set to 1, the rho0 will be fixed even if the volume of system has changed, it will be set to 1 automaticly if of_wt_rho0 is not zero");
 
     ofs.close();
     return;

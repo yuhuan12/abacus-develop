@@ -299,12 +299,24 @@ void ESolver_OF::Run(int istep, UnitCell_pseudo& ucell)
     cout << "============================================ OFDFT ============================================" <<  endl;
     while(true)
     {
+        // once we get a new rho and phi, update potential
         this->updateV();
+
+        // calculate the energy of new rho and phi
         this->cal_Energy(GlobalC::en);
+
+        // print neccesary information
         this->printInfo();
+
+        // check if the job is done
         if (this->checkExit()) break;
+
+        // find the optimization direction and step lenghth theta according to the potential
         this->solveV();
+
+        // update the rho and phi based on the direction and theta
         this->updateRho();
+
         this->iter++;
     }
     if (this->conv)
@@ -332,9 +344,16 @@ void ESolver_OF::Run(int istep, UnitCell_pseudo& ucell)
     }
     if (GlobalV::CAL_STRESS)
     {
-        // double unit_transform = ModuleBase::RYDBERG_SI / pow(ModuleBase::BOHR_RADIUS_SI,3) * 1.0e-8 / 10;
+        double unit_transform = ModuleBase::RYDBERG_SI / pow(ModuleBase::BOHR_RADIUS_SI,3) * 1.0e-8 / 10;
         ModuleBase::matrix stress(3,3);
         this->cal_Stress(stress);
+        // stress *= unit_transform;
+        // cout << "STRESS (GPa)" << endl;
+        // for (int i = 0; i < 3; ++i)
+        // {
+        //     cout << stress(i,0) << "\t"
+        //         << stress(i, 1) << "\t" << stress(i, 2) << endl;
+        // }
     }
     ModuleBase::timer::tick("ESolver_OF", "Run");
 }
@@ -352,8 +371,6 @@ void ESolver_OF::cal_Energy(energy &en)
         ePP += this->inner_product(GlobalC::pot.vltot, GlobalC::CHR.rho[is], this->nrxx, this->dV);
     }
     Parallel_Reduce::reduce_double_all(ePP);
-    // cout << "vW KEDF " << eKE << endl;
-    // cout << "PP      " << ePP << endl;
     en.etot += eKE + ePP;
 }
 
@@ -908,8 +925,29 @@ void ESolver_OF::cal_Stress(ModuleBase::matrix& stress)
 {
     Stress_PW ss;
     ss.cal_stress(stress);
-    this->tf.get_stress(GlobalC::ucell.omega);
-    stress += this->tf.stress;
+    if (this->of_kinetic == "tf")
+    {    
+        this->tf.get_stress(GlobalC::ucell.omega);
+        stress += this->tf.stress;
+    }
+    else if (this->of_kinetic == "vw")
+    {
+        this->vw.get_stress(this->pphi, this->pw_rho);
+        stress += this->vw.stress;
+    }
+    else if (this->of_kinetic == "wt")
+    {
+        this->tf.get_stress(GlobalC::ucell.omega);
+        this->vw.get_stress(this->pphi, this->pw_rho);
+        this->wt.get_stress(GlobalC::ucell.omega, GlobalC::CHR.rho, this->pw_rho, GlobalV::of_vw_weight);
+        stress += this->tf.stress + this->vw.stress + this->wt.stress;
+    }
+    else if (this->of_kinetic == "tf+")
+    {
+        this->tf.get_stress(GlobalC::ucell.omega);
+        this->vw.get_stress(this->pphi, this->pw_rho);
+        stress += this->tf.stress + this->vw.stress;
+    }
 }
 
 

@@ -59,7 +59,7 @@
   [deepks_out_labels](#out-descriptor) | [deepks_descriptor_lmax](#lmax-descriptor) | [deepks_scf](#deepks-scf) | [deepks_model](#model-file)
 - [OFDFT: orbital free density functional theory](#ofdft-orbital-free-density-functional-theory)
 
-  [of_kinetic](#of_kinetic) | [of_method](#of_method) | [of_conv](#of_conv) | [of_tole](#of_tole) | [of_tolp](#of_tolp) | [of_tf_weight](#of_tf_weight) | [of_vw_weight](#of_vw_weight) | [of_wt_alpha](#of_wt_alpha) | [of_wt_beta](#of_wt_beta)
+  [of_kinetic](#of_kinetic) | [of_method](#of_method) | [of_conv](#of_conv) | [of_tole](#of_tole) | [of_tolp](#of_tolp) | [of_tf_weight](#of_tf_weight) | [of_vw_weight](#of_vw_weight) | [of_wt_alpha](#of_wt_alpha) | [of_wt_beta](#of_wt_beta) | [of_wt_rho0](#of_wt_rho0) | [of_hold_rho0](#of_hold_rho0)
 - [Electric field and dipole correction](#Electric-field-and-dipole-correction)
 
   [efield_flag](#efield_flag) | [dip_cor_flag](#dip_cor_flag) | [efield_dir](#efield_dir) | [efield_pos_max](#efield_pos_max) | [efield_pos_dec](#efield_pos_dec) | [efield_amp ](#efield_amp)
@@ -1485,38 +1485,50 @@ This part of variables are used to control berry phase and wannier90 interfacae 
 #### of_tole
 
 - **Type**: Double
-- **Description**: tolerance of the energy change (in Ry) for determining the convergence
+- **Description**: tolerance of the energy change (in Ry) for determining the convergence.
 - **Default**: 2e-6
 
 #### of_tolp
 
 - **Type**: Double
-- **Description**:tolerance of potential (in a.u.) for determining the convergence
+- **Description**:tolerance of potential (in a.u.) for determining the convergence.
 - **Default**: 1e-5
 
 #### of_tf_weight
 
 - **Type**: Double
-- **Description**:weight of TF KEDF
+- **Description**:weight of TF KEDF.
 - **Default**: 1
 
 #### of_vw_weight
 
 - **Type**: Double
-- **Description**:weight of vW KEDF
+- **Description**:weight of vW KEDF.
 - **Default**: 1
 
 #### of_wt_alpha
 
 - **Type**: Double
-- **Description**:parameter alpha of WT KEDF
+- **Description**:parameter alpha of WT KEDF.
 - **Default**: $5/6$
 
 #### of_wt_beta
 
 - **Type**: Double
-- **Description**:parameter beta of WT KEDF
+- **Description**:parameter beta of WT KEDF.
 - **Default**: $5/6$
+
+#### of_wt_rho0
+
+- **Type**: Double
+- **Description**:the average density of system, in Bohr^-3.
+- **Default**: 0
+
+#### of_hold_rho0
+
+- **Type**: Boolean
+- **Description**:If set to 1, the rho0 will be fixed even if the volume of system has changed, it will be set to 1 automaticly if of_wt_rho0 is not zero.
+- **Default**: 0
 
 ### Variables useful for debugging
 

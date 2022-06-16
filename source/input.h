@@ -419,6 +419,8 @@ class Input
     double of_vw_weight;  // weight of vW KEDF
     double of_wt_alpha;   // parameter alpha of WT KEDF
     double of_wt_beta;    // parameter beta of WT KEDF
+    double of_wt_rho0;    // set the average density of system, in Bohr^-3
+    bool of_hold_rho0;  // If set to 1, the rho0 will be fixed even if the volume of system has changed, it will be set to 1 automaticly if of_wt_rho0 is not zero.
 
     //==========================================================
     // variables for test only
