@@ -157,15 +157,16 @@ void KEDF_WT::WT_potential(const double * const *prho, ModulePW::PW_Basis *pw_rh
 void KEDF_WT::get_stress(double cellVol, const double * const * prho, ModulePW::PW_Basis *pw_rho, double vw_weight)
 {
     double coef = 0.;
-    double mult = 1. - this->alpha - this->beta;
+    double mult = 0.;
     if (GlobalV::of_hold_rho0)
     {
         coef = 0.;
+        mult = 1. - this->alpha - this->beta;
     }    
     else
     {
         coef = -1./3.;
-        // mult = -2./3.; this is the setting in PROFESS, I don't know why
+        mult = -2./3.;
     }
 
     std::complex<double> **recipRhoAlpha = new std::complex<double> *[GlobalV::NSPIN];
