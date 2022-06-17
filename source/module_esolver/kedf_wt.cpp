@@ -161,12 +161,12 @@ void KEDF_WT::get_stress(double cellVol, const double * const * prho, ModulePW::
     if (GlobalV::of_hold_rho0)
     {
         coef = 0.;
-        mult = 1. - this->alpha - this->beta;
+        mult = -1. + this->alpha + this->beta;
     }    
     else
     {
-        coef = -1./3.;
-        mult = -2./3.;
+        coef = 1./3.;
+        mult = 2./3.;
     }
 
     std::complex<double> **recipRhoAlpha = new std::complex<double> *[GlobalV::NSPIN];
@@ -199,7 +199,7 @@ void KEDF_WT::get_stress(double cellVol, const double * const * prho, ModulePW::
         {
             eta = sqrt(pw_rho->gg[ip]) * pw_rho->tpiba / this->tkF;
             diff = this->diffLinhard(eta, vw_weight);
-            diff *= - eta * (recipRhoAlpha[is][ip] * std::conj(recipRhoBeta[is][ip])).real();
+            diff *= eta * (recipRhoAlpha[is][ip] * std::conj(recipRhoBeta[is][ip])).real();
             // cout << "diff    " << diff << endl;
             for (int a = 0; a < 3; ++a)
             {
@@ -211,7 +211,7 @@ void KEDF_WT::get_stress(double cellVol, const double * const * prho, ModulePW::
                     }
                     else
                     {
-                        this->stress(a,b) += diff * pw_rho->gcar[ip][a] * pw_rho->gcar[ip][b] / pw_rho->gg[ip];
+                        this->stress(a,b) += - diff * pw_rho->gcar[ip][a] * pw_rho->gcar[ip][b] / pw_rho->gg[ip];
                         if (a == b) this->stress(a,b) += diff * coef;
                     }
                 }
@@ -238,7 +238,7 @@ void KEDF_WT::get_stress(double cellVol, const double * const * prho, ModulePW::
 
     for (int a = 0; a < 3; ++a)
     {
-        this->stress(a,a) += - mult * this->WTenergy / cellVol;
+        this->stress(a,a) += mult * this->WTenergy / cellVol;
         for (int b = 0; b < a; ++b)
         {
             this->stress(a,b) = this->stress(b,a);

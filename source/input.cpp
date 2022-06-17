@@ -1925,6 +1925,7 @@ void Input::Default_2(void) // jiyy add 2019-08-04
     }
     if(calculation.substr(0,3) != "sto")    bndpar = 1;
     if(bndpar > GlobalV::NPROC) bndpar = GlobalV::NPROC;
+    if(of_wt_rho0 != 0) of_hold_rho0 = true; // sunliang add 2022-06-17
 }
 #ifdef __MPI
 void Input::Bcast()
@@ -2489,10 +2490,6 @@ void Input::Check(void)
         if (pseudo_type != "blps")
         {
             ModuleBase::WARNING_QUIT("Input::Check", "pseudo_type in ofdft should be set as blps");
-        }
-        if (of_wt_rho0 != 0.)
-        {
-            of_hold_rho0 = true;
         }
     }
     else
