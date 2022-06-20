@@ -197,13 +197,22 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &ucell)
     for (int is = 0; is < GlobalV::NSPIN; ++is)
     {
         this->pphi[is] = this->psi->get_pointer(is);
-        for (int ibs = 0; ibs < this->nrxx; ++ibs)
+        if (GlobalC::pot.init_chg != "file")
         {
-            // Here we initialize rho to be uniform, 
-            // because the rho got by pot.init_pot -> Charge::atomic_rho may contain minus elements.
-            GlobalC::CHR.rho[is][ibs] = this->nelec[is]/GlobalC::ucell.omega;
-            this->pphi[is][ibs] = sqrt(GlobalC::CHR.rho[is][ibs]);
-            // this->psi[0, is, ibs] = sqrt(GlobalC::CHR.rho[is][ibs]);
+            for (int ibs = 0; ibs < this->nrxx; ++ibs)
+            {
+                // Here we initialize rho to be uniform, 
+                // because the rho got by pot.init_pot -> Charge::atomic_rho may contain minus elements.
+                GlobalC::CHR.rho[is][ibs] = this->nelec[is]/GlobalC::ucell.omega;
+                this->pphi[is][ibs] = sqrt(GlobalC::CHR.rho[is][ibs]);
+            }
+        }
+        else
+        {
+            for (int ibs = 0; ibs < this->nrxx; ++ibs)
+            {
+                this->pphi[is][ibs] = sqrt(GlobalC::CHR.rho[is][ibs]);
+            }
         }
     }
 
@@ -237,11 +246,6 @@ void ESolver_OF::Init(Input &inp, UnitCell_pseudo &ucell)
     // }
 // ===============================================================
 
-
-    // p_es->init(inp, ucell, basis_pw);
-
-    // phamilt->init(bas); 
-    // phamilt->initpot(ucell, pes);
     if (this->of_method == "tn")
     {
         this->opt_tn.allocate(this->nrxx);
@@ -830,7 +834,6 @@ void ESolver_OF::calV(double *ptempPhi, double *rdLdphi)
     double **dEdtempPhi = new double*[GlobalV::NSPIN];
     double **tempPhi = new double*[GlobalV::NSPIN];
 
-    // double *dEdtempPhi = new double[this->nrxx];
     double **tempRho = new double*[GlobalV::NSPIN];
     for (int is = 0; is < GlobalV::NSPIN; ++is)
     {
@@ -885,15 +888,12 @@ void ESolver_OF::caldEdtheta(double **ptempPhi, double **ptempRho, double *pthet
     GlobalC::pot.vr = GlobalC::pot.v_of_rho(ptempRho, GlobalC::CHR.rho_core);
     GlobalC::pot.set_vr_eff();
 
-    // this->tf.tf_potential(ptempRho);
-    // this->kineticPotential(ptempRho, ptempPhi, this->pdEdphi);
     this->kineticPotential(ptempRho, ptempPhi, GlobalC::pot.vr_eff);
     for (int is = 0; is < GlobalV::NSPIN; ++is)
     {
         for (int ir = 0; ir < this->nrxx; ++ir)
         {
             this->pdEdphi[is][ir] = GlobalC::pot.vr_eff(is,ir)  * 2 * ptempPhi[is][ir];
-            // this->pdEdphi[is][ir] = (GlobalC::pot.vr_eff(is,ir) + this->pdEdphi[is][ir]) * 2 * ptempPhi[is][ir];
 
             pdPhidTheta[ir] = - this->pphi[is][ir] * sin(ptheta[is]) + this->pdirect[is][ir] * cos(ptheta[is]);
         }

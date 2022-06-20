@@ -86,12 +86,14 @@ double KEDF_WT::get_energy_density(double **prho, int is, int ir, ModulePW::PW_B
     for (int is = 0; is < GlobalV::NSPIN; ++is) kernelRhoBeta[is] = new double[pw_rho->nrxx];
     this->multiKernel(prho, kernelRhoBeta, this->beta, pw_rho);
 
+    double result = this->cTF * pow(prho[is][ir], this->alpha) * kernelRhoBeta[is][ir];
+
     for (int is = 0; is < GlobalV::NSPIN; ++is)
     {
         delete[] kernelRhoBeta[is];
     }
     delete[] kernelRhoBeta;
-    return this->cTF * (prho[is][ir], this->alpha) * kernelRhoBeta[is][ir];
+    return result;
 }
 
 
