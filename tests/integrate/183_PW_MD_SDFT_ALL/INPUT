@@ -5,9 +5,10 @@ calculation     sto-md
 ntype			1
 symmetry		0
 pseudo_dir      ../tools/PP_ORB/
-nbands			0
 
+nbands			0
 nbands_sto		0
+
 nche_sto		90
 seed_sto        20000
 emax_sto              23.5079108951
@@ -24,7 +25,6 @@ scf_nmax		20
 
 #Parameters (3.Basis)
 basis_type		pw
-gamma_only		1
 
 #Parameters (4.Smearing)
 smearing_method		fd
@@ -38,3 +38,4 @@ mixing_beta		0.4
 md_tfirst      10
 md_tfreq       0.1
 md_nstep       2
+init_vel       1

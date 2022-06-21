@@ -22,6 +22,8 @@ int NBANDS = 0;
 int NBANDS_ISTATE = 0; // default number.
 int NLOCAL = 0; // total number of local basis.
 
+double KSPACING = 0.0;
+
 double PSEUDORCUT;
 bool PSEUDO_MESH;
 
@@ -209,4 +211,10 @@ std::string of_method = "tn";
 std::string of_conv = "energy";
 double of_tole = 2e-6;
 double of_tolp = 1e-5;
+double of_tf_weight = 1.;
+double of_vw_weight = 1.;
+double of_wt_alpha = 5./6.;  
+double of_wt_beta = 5./6.;
+double of_wt_rho0 = 0.;
+bool of_hold_rho0 = false;
 } // namespace GlobalV

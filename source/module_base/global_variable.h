@@ -22,6 +22,8 @@ extern int NBANDS;
 extern int NBANDS_ISTATE; // 1.05 // mohan add 2011-03-22
 extern int NLOCAL; // 1.1 // mohan add 2009-05-29
 
+extern double KSPACING;
+
 extern double PSEUDORCUT;
 extern bool PSEUDO_MESH;
 
@@ -237,6 +239,12 @@ extern std::string of_method;  // optimization method, include cg1, cg2, tn (def
 extern std::string of_conv;    // select the convergence criterion, potential, energy (default), or both
 extern double of_tole;    // tolerance of the energy change (in Ry) for determining the convergence, default=2e-6 Ry
 extern double of_tolp;    // tolerance of potential for determining the convergence, default=1e-5 in a.u.
+extern double of_tf_weight;  // weight of TF KEDF
+extern double of_vw_weight;  // weight of vW KEDF
+extern double of_wt_alpha;   // parameter alpha of WT KEDF
+extern double of_wt_beta;    // parameter beta of WT KEDF
+extern double of_wt_rho0;    // set the average density of system, in Bohr^-3
+extern bool of_hold_rho0;  // If set to 1, the rho0 will be fixed even if the volume of system has changed, it will be set to 1 automaticly if of_wt_rho0 is not zero.
 
 } // namespace GlobalV
 #endif

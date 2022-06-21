@@ -3,30 +3,17 @@
 #include "../src_parallel/parallel_reduce.h"
 
 
-void KEDF_TF::set_para(int nx, double dV)
+void KEDF_TF::set_para(int nx, double dV, double tf_weight)
 {
     this->nx = nx;
     this->dV = dV;
-    if (this->potential != NULL)
-    {
-        for (int is = 0; is < GlobalV::NSPIN; ++is)
-        {
-            delete[] this->potential[is];
-        }
-        delete[] this->potential;
-    } 
-    this->potential = new double*[GlobalV::NSPIN];
-    for (int is = 0; is < GlobalV::NSPIN; ++is)
-    {
-        this->potential[is] = new double[this->nx];
-        ModuleBase::GlobalFunc::ZEROS(this->potential[is], this->nx);
-    }
+    this->tf_weight = tf_weight;
 }
 
 // 
 // Etf = cTF * \int{dr rho^{5/3}}
 // 
-double KEDF_TF::get_energy(double **prho)
+double KEDF_TF::get_energy(const double * const *prho)
 {
     double energy = 0.; // in Ry
     if (GlobalV::NSPIN == 1)
@@ -46,7 +33,7 @@ double KEDF_TF::get_energy(double **prho)
                 energy += pow(2. * prho[is][ir], 5./3.);
             }
         }
-        energy *= 0.5 * this->dV * this->cTF;
+        energy *= 0.5 * this->dV * this->cTF * this->tf_weight;
     }
     this->TFenergy = energy;
     Parallel_Reduce::reduce_double_all(this->TFenergy);
@@ -56,21 +43,21 @@ double KEDF_TF::get_energy(double **prho)
 double KEDF_TF::get_energy_density(double **prho, int is, int ir)
 {
     double energyDen = 0.; // in Ry
-    energyDen = this->cTF * pow(prho[is][ir], 5./3.);
+    energyDen = this->cTF * pow(prho[is][ir], 5./3.) * this->tf_weight;
     return energyDen;
 }
 
 // 
 // Vtf = delta Etf/delta rho = 5/3 * cTF * rho^{2/3}
 // 
-void KEDF_TF::tf_potential(const double * const *prho)
+void KEDF_TF::tf_potential(const double * const *prho, ModuleBase::matrix &rpotential)
 {
     ModuleBase::timer::tick("KEDF_TF", "tf_potential");
     if (GlobalV::NSPIN  == 1)
     {
         for (int ir = 0; ir < this->nx; ++ir)
         {
-            this->potential[0][ir] = 5.0/3.0 * this->cTF * pow(prho[0][ir], 2./3.);
+            rpotential(0, ir) += 5.0/3.0 * this->cTF * pow(prho[0][ir], 2./3.) * this->tf_weight;
         }
     }
     else if (GlobalV::NSPIN == 2)
@@ -79,10 +66,13 @@ void KEDF_TF::tf_potential(const double * const *prho)
         {
             for (int ir = 0; ir < this->nx; ++ir)
             {
-                this->potential[is][ir] = 5.0/3.0 * this->cTF * pow(2. * prho[is][ir], 2./3.);
+                rpotential(is, ir) += 5.0/3.0 * this->cTF * pow(2. * prho[is][ir], 2./3.) * this->tf_weight;
             }
         }
     }
+
+    this->get_energy(prho);
+
     ModuleBase::timer::tick("KEDF_TF", "tf_potential");
 }
 
@@ -91,11 +81,11 @@ void KEDF_TF::get_stress(double cellVol, double inpt_TFenergy)
     double temp = 0.;
     if (inpt_TFenergy == -1)
     {
-        temp = 2. * this->TFenergy / (3. * cellVol);
+        temp = 2. * this->TFenergy / (3. * cellVol) * this->tf_weight;
     }
     else
     {
-        temp = 2. * inpt_TFenergy / (3. * cellVol);
+        temp = 2. * inpt_TFenergy / (3. * cellVol) * this->tf_weight;
     }
 // #ifdef __MPI
 //     //

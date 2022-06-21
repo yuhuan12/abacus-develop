@@ -3,6 +3,8 @@
 #include "./opt/opt_DCsrch.h"
 #include "../module_psi/psi.h"
 #include "./kedf_tf.h"
+#include "./kedf_vw.h"
+#include "./kedf_wt.h"
 
 namespace ModuleESolver
 {
@@ -13,9 +15,10 @@ class ESolver_OF: public ESolver_FP
 // MD TEST
 // SPIN POLARISE
 public:
+    psi::Psi<double>* psi=nullptr;
 
     // psi::Psi<double> *ppsi; 
-    psi::Psi<double> ppsi; 
+    // psi::Psi<double> ppsi; 
     // ElecState *p_es; 
 
     ESolver_OF()
@@ -38,6 +41,10 @@ public:
     {
         // delete this->p_es;
         // delete this->ppsi;
+        if(this->psi != nullptr)
+        {
+            delete psi;
+        }
         if (this->pdirect != NULL)
         {
             for (int i = 0; i < GlobalV::NSPIN; ++i)
@@ -72,8 +79,8 @@ public:
     }
 
     // Basis_PW basis_pw;
-    virtual void Init(Input &inp, UnitCell_pseudo &cell) override;
-    virtual void Run(int istep, UnitCell_pseudo& cell) override;
+    virtual void Init(Input &inp, UnitCell_pseudo &ucell) override;
+    virtual void Run(int istep, UnitCell_pseudo& ucell) override;
 
     virtual void cal_Energy(energy &en) override;
     virtual void cal_Force(ModuleBase::matrix &force) override;
@@ -85,6 +92,8 @@ public:
 
 private:
     KEDF_TF tf;
+    KEDF_vW vw;
+    KEDF_WT wt;
 
     Opt_CG opt_cg;
     Opt_TN opt_tn;
@@ -145,5 +154,8 @@ private:
         innerproduct *= dV;
         return innerproduct;
     }
+
+    void kineticPotential(double **prho, double **pphi, ModuleBase::matrix &rpot);
+    double kineticEnergy();
 };
 }

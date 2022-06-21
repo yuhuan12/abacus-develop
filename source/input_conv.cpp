@@ -29,6 +29,9 @@
 #include "module_base/timer.h"
 #include "module_surchem/efield.h"
 
+#include "module_elecstate/elecstate_lcao.h"
+#include "module_hsolver/hsolver_lcao.h"
+
 void Input_Conv::Convert(void)
 {
     ModuleBase::TITLE("Input_Conv", "Convert");
@@ -49,6 +52,7 @@ void Input_Conv::Convert(void)
     GlobalV::global_pseudo_type = INPUT.pseudo_type;
     GlobalC::ucell.setup(INPUT.latname, INPUT.ntype, INPUT.lmaxmax, INPUT.init_vel, INPUT.fixed_axes);
 
+    GlobalV::KSPACING = INPUT.kspacing;
     GlobalV::NBANDS = INPUT.nbands;
     GlobalC::wf.pw_seed = INPUT.pw_seed;
     GlobalV::NBANDS_ISTATE = INPUT.nbands_istate;
@@ -109,20 +113,7 @@ void Input_Conv::Convert(void)
     //----------------------------------------------------------
     // planewave (8/8)
     //----------------------------------------------------------
-    GlobalC::pw.set(INPUT.gamma_only,
-                    INPUT.ecutwfc,
-                    INPUT.ecutrho,
-                    INPUT.nx,
-                    INPUT.ny,
-                    INPUT.nz,
-                    INPUT.ncx,
-                    INPUT.ncy,
-                    INPUT.ncz,
-                    INPUT.bx,
-                    INPUT.by,
-                    INPUT.bz,
-                    INPUT.pw_seed,
-                    INPUT.nbspline);
+    GlobalC::sf.set(INPUT.nbspline);
     GlobalV::GAMMA_ONLY_LOCAL = INPUT.gamma_only_local;
 
     //----------------------------------------------------------
@@ -449,9 +440,9 @@ void Input_Conv::Convert(void)
     GlobalC::en.out_proj_band = INPUT.out_proj_band;
 #ifdef __LCAO
     Local_Orbital_Charge::out_dm = INPUT.out_dm;
-    Pdiag_Double::out_mat_hs = INPUT.out_mat_hs;
-    Pdiag_Double::out_mat_hsR = INPUT.out_mat_hs2; // LiuXh add 2019-07-16
-    Pdiag_Double::out_wfc_lcao = INPUT.out_wfc_lcao;
+    hsolver::HSolverLCAO::out_mat_hs = INPUT.out_mat_hs;
+    hsolver::HSolverLCAO::out_mat_hsR = INPUT.out_mat_hs2; // LiuXh add 2019-07-16
+    elecstate::ElecStateLCAO::out_wfc_lcao = INPUT.out_wfc_lcao;
 #endif
 
     GlobalC::en.dos_emin_ev = INPUT.dos_emin_ev;
@@ -516,5 +507,11 @@ void Input_Conv::Convert(void)
     GlobalV::of_conv = INPUT.of_conv;
     GlobalV::of_tole = INPUT.of_tole;
     GlobalV::of_tolp = INPUT.of_tolp;
+    GlobalV::of_tf_weight = INPUT.of_tf_weight;
+    GlobalV::of_vw_weight = INPUT.of_vw_weight;
+    GlobalV::of_wt_alpha = INPUT.of_wt_alpha;
+    GlobalV::of_wt_beta = INPUT.of_wt_beta;
+    GlobalV::of_wt_rho0 = INPUT.of_wt_rho0;
+    GlobalV::of_hold_rho0 = INPUT.of_hold_rho0;
     return;
 }
