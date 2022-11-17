@@ -341,7 +341,6 @@ OBJS_IO=berryphase.o\
     energy_dos_pw.o\
     epsilon0_pwscf.o\
     epsilon0_vasp.o\
-    eximport.o\
     dos.o\
     numerical_descriptor.o\
     numerical_basis.o\

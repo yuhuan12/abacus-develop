@@ -20,7 +20,6 @@ class energy
 	friend class Potential;
 	friend class Occupy;
 	friend class wavefunc;
-	friend class eximport;
 	friend class Ions;
 	friend class Update_input;
 	friend class Force_Lo;
