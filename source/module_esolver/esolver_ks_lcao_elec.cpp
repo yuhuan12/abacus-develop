@@ -391,7 +391,7 @@ namespace ModuleESolver
         else if (GlobalV::CALCULATION == "istate")
         {
             IState_Charge ISC(this->psid, this->LOC);
-            ISC.begin(this->UHM.GG, this->pelec->wg);
+            ISC.begin(this->UHM.GG, this->pelec);
         }
         else if (GlobalV::CALCULATION == "ienvelope")
         {

@@ -243,11 +243,6 @@ void DFTU::init(
 				this->U_Yukawa.at(it).at(l).resize(N, 0.0);
 				this->J_Yukawa.at(it).at(l).resize(N, 0.0);
 
-				// if(l>=orbital_corr[it] && orbital_corr[it]!=-1)
-				// {
-					// this->cal_slater_Fk(l, it);
-					// this->cal_slater_UJ(it, l);
-				// }
 			}			 	
 		}
  	}

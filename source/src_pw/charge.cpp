@@ -216,7 +216,7 @@ void Charge::init_rho()
     {
         for (int is = 0; is < GlobalV::NSPIN; ++is)
         {
-            GlobalC::restart.load_disk("charge", is);
+            GlobalC::restart.load_disk("charge", is, rho);
         }
         GlobalC::restart.info_load.load_charge_finish = true;
     }
