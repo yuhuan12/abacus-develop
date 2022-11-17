@@ -612,14 +612,6 @@ void Charge::atomic_rho(const int spin_number_need, double** rho_in, ModulePW::P
 			}
 	}
 
-	// if TWO_EFEMI, 
-	// the total magnetism will affect the calculation of
-	// occupations.
-	// GlobalC::ucell.magnet.compute_magnetization();
-
-	//GlobalV::ofs_running << " Superposition of atomic wave function as First-Charge done." << std::endl;
-	//2014-06-22
-
     ModuleBase::timer::tick("Charge","atomic_rho");
     return;
 }
