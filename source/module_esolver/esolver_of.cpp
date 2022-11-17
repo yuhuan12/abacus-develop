@@ -172,7 +172,7 @@ void ESolver_OF::Init(Input &inp, UnitCell &ucell)
     this->nelec = new double[GlobalV::NSPIN];
     if (GlobalV::NSPIN == 1)
     {
-        this->nelec[0] = pelec->charge->nelec;
+        this->nelec[0] = GlobalV::NELEC;
     }
     else if (GlobalV::NSPIN == 2)
     {
@@ -285,7 +285,7 @@ void ESolver_OF::beforeOpt(const int istep)
     {
         CE.update_istep();
         CE.save_pos_next(GlobalC::ucell);
-        CE.extrapolate_charge();
+        CE.extrapolate_charge(pelec->charge);
 
         if(GlobalC::ucell.cell_parameter_updated)
         {
@@ -306,7 +306,7 @@ void ESolver_OF::beforeOpt(const int istep)
 
     for (int is = 0; is < GlobalV::NSPIN; ++is)
     {
-        if (GlobalC::CHR.init_chg != "file")
+        if (GlobalV::init_chg != "file")
         {
             for (int ibs = 0; ibs < this->nrxx; ++ibs)
             {
@@ -898,7 +898,7 @@ void ESolver_OF::afterOpt()
         GlobalV::ofs_running << " convergence has NOT been achieved!" << std::endl;
     }
 
-    if (GlobalC::CHR.out_chg > 0)
+    if (GlobalV::out_chg > 0)
     {
         for (int is = 0; is < GlobalV::NSPIN; is++)
         {

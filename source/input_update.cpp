@@ -209,10 +209,10 @@ bool Update_input::Read(const std::string &fn)
         else if (strcmp("out_chg", word) == 0)
         {
             read_value(ifs, out_chg);
-			if(out_chg!=GlobalC::CHR.out_chg)
+			if(out_chg!=GlobalV::out_chg)
 			{
-				this->change(GlobalV::ofs_warning,"out_chg",GlobalC::CHR.out_chg,out_chg);
-    			GlobalC::CHR.out_chg = this->out_chg;
+				this->change(GlobalV::ofs_warning,"out_chg",GlobalV::out_chg,out_chg);
+    			GlobalV::out_chg = this->out_chg;
 			}
         }
 		// 11
@@ -298,9 +298,9 @@ void Update_input::Bcast()
     Parallel_Common::bcast_int( GlobalV::RELAX_NMAX );
     Parallel_Common::bcast_int( GlobalC::en.printe );
     Parallel_Common::bcast_string( GlobalV::chg_extrap );//xiaohui modify 2015-02-01
-    Parallel_Common::bcast_int( GlobalC::CHR.out_chg );
+    Parallel_Common::bcast_int( GlobalV::out_chg );
 	Parallel_Common::bcast_int( GlobalC::en.out_dos );
-    Parallel_Common::bcast_double( GlobalC::CHR.nelec );
+    Parallel_Common::bcast_double( GlobalV::NELEC );
 	
     Parallel_Common::bcast_int( GlobalV::MD_NSTEP );
     return;

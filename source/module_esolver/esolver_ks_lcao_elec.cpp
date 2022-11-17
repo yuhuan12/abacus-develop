@@ -262,7 +262,7 @@ namespace ModuleESolver
         {
             CE.update_istep();
             CE.save_pos_next(GlobalC::ucell);
-            CE.extrapolate_charge();
+            CE.extrapolate_charge(pelec->charge);
 
             if(GlobalC::ucell.cell_parameter_updated)
             {
@@ -278,7 +278,7 @@ namespace ModuleESolver
                 // charge extrapolation if istep>0.
                 CE.update_istep();
                 CE.update_all_pos(GlobalC::ucell);
-                CE.extrapolate_charge();
+                CE.extrapolate_charge(pelec->charge);
                 CE.save_pos_next(GlobalC::ucell);
 
                 GlobalV::ofs_running << " Setup the Vl+Vh+Vxc according to new structure factor and new charge." << std::endl;

@@ -206,7 +206,7 @@ namespace ModuleESolver
                     // double drho = this->estate.caldr2(); 
                     // EState should be used after it is constructed.
                     drho = GlobalC::CHR_MIX.get_drho(pelec->charge->rho, pelec->charge->rho_save,
-                        pelec->charge->rhog, pelec->charge->rhog_save, pelec->charge->nelec);
+                        pelec->charge->rhog, pelec->charge->rhog_save, GlobalV::NELEC);
                     double hsolver_error = 0.0;
                     if (firstscf)
                     {
@@ -218,7 +218,7 @@ namespace ModuleESolver
                             diag_ethr = this->phsol->reset_diagethr(GlobalV::ofs_running, hsolver_error, drho);
                             this->hamilt2density(istep, iter, diag_ethr);
                             drho = GlobalC::CHR_MIX.get_drho(pelec->charge->rho, pelec->charge->rho_save,
-                                pelec->charge->rhog, pelec->charge->rhog_save, pelec->charge->nelec);
+                                pelec->charge->rhog, pelec->charge->rhog_save, GlobalV::NELEC);
                             hsolver_error = this->phsol->cal_hsolerror();
                         }
                     }

@@ -162,7 +162,7 @@ namespace ModuleESolver
         {
             CE.update_istep();
             CE.save_pos_next(GlobalC::ucell);
-            CE.extrapolate_charge();
+            CE.extrapolate_charge(pelec->charge);
 
             if(GlobalC::ucell.cell_parameter_updated)
             {
@@ -180,7 +180,7 @@ namespace ModuleESolver
                 // charge extrapolation if istep>0.
                 CE.update_istep();
                 CE.update_all_pos(GlobalC::ucell);
-                CE.extrapolate_charge();
+                CE.extrapolate_charge(pelec->charge);
                 CE.save_pos_next(GlobalC::ucell);
 
                 GlobalV::ofs_running << " Setup the Vl+Vh+Vxc according to new structure factor and new charge." << std::endl;
@@ -382,7 +382,7 @@ namespace ModuleESolver
 
         if (print)
         {
-            if (pelec->charge->out_chg > 0)
+            if (GlobalV::out_chg > 0)
             {
                 for (int is = 0; is < GlobalV::NSPIN; is++)
                 {
@@ -703,7 +703,7 @@ namespace ModuleESolver
         // =======================================
         double diag_ethr = GlobalV::PW_DIAG_THR;
         if(diag_ethr - 1e-2 > -1e-5)   
-            diag_ethr = std::max(1e-13, 0.1*std::min(1e-2,GlobalV::SCF_THR / this->pelec->charge->nelec));
+            diag_ethr = std::max(1e-13, 0.1*std::min(1e-2,GlobalV::SCF_THR / GlobalV::NELEC));
         GlobalV::ofs_running << " PW_DIAG_THR  = "<< diag_ethr << std::endl;
 
         this->hamilt2estates(diag_ethr);
