@@ -218,7 +218,7 @@ namespace ModuleESolver
             }
 
             // renormalize the charge density
-            GlobalC::CHR.renormalize_rho();
+            pelec->charge->renormalize_rho();
         }
 
 #ifdef __DEEPKS

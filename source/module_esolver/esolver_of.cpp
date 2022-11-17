@@ -87,9 +87,6 @@ void ESolver_OF::Init(Input &inp, UnitCell &ucell)
     // 4 initialize charge desity and warefunctios in real space
     //----------------------------------------------------------
 
-    // Inititlize the charge density.
-    GlobalC::CHR.allocate(GlobalV::NSPIN, GlobalC::rhopw->nrxx, GlobalC::rhopw->npw);
-
     // Initialize the "wavefunction", which is sqrt(rho)
     this->psi = new psi::Psi<double>(1, GlobalV::NSPIN, this->nrxx);
     this->pphi = new double*[GlobalV::NSPIN];
@@ -103,12 +100,6 @@ void ESolver_OF::Init(Input &inp, UnitCell &ucell)
     // init pseudopotential
     //=======================
     GlobalC::ppcell.init(GlobalC::ucell.ntype);
-
-    //=====================
-    // init hamiltonian
-    // only allocate in the beginning of ELEC LOOP!
-    //=====================
-    // GlobalC::hm.hpw.allocate(GlobalC::wf.npwx, GlobalV::NPOL, GlobalC::ppcell.nkb, GlobalC::rhopw->nrxx);
 
     //=================================
     // initalize local pseudopotential
@@ -127,44 +118,47 @@ void ESolver_OF::Init(Input &inp, UnitCell &ucell)
     if(this->pelec == nullptr)
     {
         this->pelec = new elecstate::ElecState((Charge*)(&GlobalC::CHR));
-        this->pelec->pot = new elecstate::Potential(
-            GlobalC::rhopw,
-            &GlobalC::ucell,
-            &GlobalC::ppcell.vloc,
-            &GlobalC::sf.strucFac,
-            &(GlobalC::en.etxc),
-            &(GlobalC::en.vtxc)
-        );
-        //There is no Operator in ESolver_OF, register Potentials here!
-        std::vector<string> pot_register_in;
-        if (GlobalV::VION_IN_H)
-        {
-            pot_register_in.push_back("local");
-        }
-        if (GlobalV::VH_IN_H)
-        {
-            pot_register_in.push_back("hartree");
-        }
-        //no variable can choose xc, maybe it is necessary
-        pot_register_in.push_back("xc");
-        if (GlobalV::imp_sol)
-        {
-            pot_register_in.push_back("surchem");
-        }
-        if (GlobalV::EFIELD_FLAG)
-        {
-            pot_register_in.push_back("efield");
-        }
-        if (GlobalV::GATE_FLAG)
-        {
-            pot_register_in.push_back("gatefield");
-        }
-        //only Potential is not empty, Veff and Meta are available
-        if(pot_register_in.size()>0)
-        {
-            //register Potential by gathered operator
-            this->pelec->pot->pot_register(pot_register_in);
-        }
+    }
+
+    this->pelec->charge->allocate(GlobalV::NSPIN, GlobalC::rhopw->nrxx, GlobalC::rhopw->npw);
+        
+    this->pelec->pot = new elecstate::Potential(
+        GlobalC::rhopw,
+        &GlobalC::ucell,
+        &GlobalC::ppcell.vloc,
+        &GlobalC::sf.strucFac,
+        &(GlobalC::en.etxc),
+        &(GlobalC::en.vtxc)
+    );
+    //There is no Operator in ESolver_OF, register Potentials here!
+    std::vector<string> pot_register_in;
+    if (GlobalV::VION_IN_H)
+    {
+        pot_register_in.push_back("local");
+    }
+    if (GlobalV::VH_IN_H)
+    {
+        pot_register_in.push_back("hartree");
+    }
+    //no variable can choose xc, maybe it is necessary
+    pot_register_in.push_back("xc");
+    if (GlobalV::imp_sol)
+    {
+        pot_register_in.push_back("surchem");
+    }
+    if (GlobalV::EFIELD_FLAG)
+    {
+        pot_register_in.push_back("efield");
+    }
+    if (GlobalV::GATE_FLAG)
+    {
+        pot_register_in.push_back("gatefield");
+    }
+    //only Potential is not empty, Veff and Meta are available
+    if(pot_register_in.size()>0)
+    {
+        //register Potential by gathered operator
+        this->pelec->pot->pot_register(pot_register_in);
     }
 
     //=========================================================

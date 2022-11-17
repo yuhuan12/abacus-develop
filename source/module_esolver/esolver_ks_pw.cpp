@@ -121,21 +121,22 @@ namespace ModuleESolver
     {
         ESolver_KS::Init(inp,ucell);
 
-        //init ElecState,
-        if(this->pelec == nullptr)
-        {
-            this->pelec = new elecstate::ElecStatePW<double>( GlobalC::wfcpw, &(GlobalC::CHR), (K_Vectors*)(&(GlobalC::kv)), GlobalV::NBANDS);
-        }
         //init HSolver
         if(this->phsol == nullptr)
         {
             this->phsol = new hsolver::HSolverPW(GlobalC::wfcpw);
         }
 
+        //init ElecState,
+        if(this->pelec == nullptr)
+        {
+            this->pelec = new elecstate::ElecStatePW<double>( GlobalC::wfcpw, &(GlobalC::CHR), (K_Vectors*)(&(GlobalC::kv)), GlobalV::NBANDS);
+        }
+
         // Inititlize the charge density.
         this->pelec->charge->allocate(GlobalV::NSPIN, GlobalC::rhopw->nrxx, GlobalC::rhopw->npw);
 
-        // Initializee the potential.
+        // Initialize the potential.
         if(this->pelec->pot == nullptr)
         {
             this->pelec->pot = new elecstate::Potential(

@@ -143,28 +143,13 @@ void ESolver_KS_LCAO::Init(Input& inp, UnitCell& ucell)
     this->LOC.ParaV = this->LOWF.ParaV = this->LM.ParaV;
 
     // init Psi, HSolver, ElecState, Hamilt
-    if (this->phsol != nullptr)
-    {
-        if (this->phsol->classname != "HSolverLCAO")
-        {
-            delete this->phsol;
-            this->phsol = nullptr;
-        }
-    }
-    else
+    if(this->phsol == nullptr)
     {
         this->phsol = new hsolver::HSolverLCAO(this->LOWF.ParaV);
         this->phsol->method = GlobalV::KS_SOLVER;
     }
-    if (this->pelec != nullptr)
-    {
-        if (this->pelec->classname != "ElecStateLCAO")
-        {
-            delete this->pelec;
-            this->pelec = nullptr;
-        }
-    }
-    else
+
+    if(this->pelec == nullptr)
     {
         this->pelec = new elecstate::ElecStateLCAO(&(GlobalC::CHR),
                                                    &(GlobalC::kv),
@@ -173,12 +158,14 @@ void ESolver_KS_LCAO::Init(Input& inp, UnitCell& ucell)
                                                    &(this->LOC),
                                                    &(this->UHM),
                                                    &(this->LOWF));
+    }
 
+    // Inititlize the charge density.
+    this->pelec->charge->allocate(GlobalV::NSPIN, GlobalC::rhopw->nrxx, GlobalC::rhopw->npw);
 
-        // Inititlize the charge density.
-        this->pelec->charge->allocate(GlobalV::NSPIN, GlobalC::rhopw->nrxx, GlobalC::rhopw->npw);
-
-        // Initializee the potential.
+        // Initialize the potential.
+    if(this->pelec->pot == nullptr)
+    {
         this->pelec->pot = new elecstate::Potential(
             GlobalC::rhopw,
             &GlobalC::ucell,
@@ -187,25 +174,17 @@ void ESolver_KS_LCAO::Init(Input& inp, UnitCell& ucell)
             &(GlobalC::en.etxc),
             &(GlobalC::en.vtxc)
         );
+    }
 
 #ifdef __DEEPKS
-        // wenfei 2021-12-19
-        // if we are performing DeePKS calculations, we need to load a model
-        if (GlobalV::deepks_scf)
-        {
-            // load the DeePKS model from deep neural network
-            GlobalC::ld.load_model(INPUT.deepks_model);
-        }
-#endif
-
-        // Initialize the FFT.
-        // this function belongs to cell LOOP
-
-        // Initialize the sum of all local potentials.
-        // if ion_step==0, read in/initialize the potentials
-        // this function belongs to ions LOOP
-        int ion_step = 0;
+    // wenfei 2021-12-19
+    // if we are performing DeePKS calculations, we need to load a model
+    if (GlobalV::deepks_scf)
+    {
+        // load the DeePKS model from deep neural network
+        GlobalC::ld.load_model(INPUT.deepks_model);
     }
+#endif
 }
 
 void ESolver_KS_LCAO::cal_Energy(double& etot)

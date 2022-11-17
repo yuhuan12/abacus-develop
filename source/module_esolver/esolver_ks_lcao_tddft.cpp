@@ -52,11 +52,6 @@ void ESolver_KS_LCAO_TDDFT::Init(Input& inp, UnitCell& ucell)
     // this function belongs to cell LOOP
     GlobalC::ppcell.init_vloc(GlobalC::ppcell.vloc, GlobalC::rhopw);
 
-    // Initialize the sum of all local potentials.
-    // if ion_step==0, read in/initialize the potentials
-    // this function belongs to ions LOOP
-    int ion_step = 0;
-
     //------------------init Basis_lcao----------------------
     // Init Basis should be put outside of Ensolver.
     // * reading the localized orbitals/projectors
@@ -76,28 +71,13 @@ void ESolver_KS_LCAO_TDDFT::Init(Input& inp, UnitCell& ucell)
     this->LOC.ParaV = this->LOWF.ParaV = this->LM.ParaV;
 
     // init Psi, HSolver, ElecState, Hamilt
-    if (this->phsol != nullptr)
-    {
-        if (this->phsol->classname != "HSolverLCAO")
-        {
-            delete this->phsol;
-            this->phsol = nullptr;
-        }
-    }
-    else
+    if(this->phsol == nullptr)
     {
         this->phsol = new hsolver::HSolverLCAO(this->LOWF.ParaV);
         this->phsol->method = GlobalV::KS_SOLVER;
     }
-    if (this->pelec != nullptr)
-    {
-        if (this->pelec->classname != "ElecStateLCAO_TDDFT")
-        {
-            delete this->pelec;
-            this->pelec = nullptr;
-        }
-    }
-    else
+
+    if(this->pelec == nullptr)
     {
         this->pelec = new elecstate::ElecStateLCAO_TDDFT(   &(GlobalC::CHR),
                                                             &(GlobalC::kv),
@@ -106,19 +86,20 @@ void ESolver_KS_LCAO_TDDFT::Init(Input& inp, UnitCell& ucell)
                                                             &(this->LOC),
                                                             &(this->UHM),
                                                             &(this->LOWF));
-        // Inititlize the charge density.
-        this->pelec->charge->allocate(GlobalV::NSPIN, GlobalC::rhopw->nrxx, GlobalC::rhopw->npw);
-
-        // Initializee the potential.
-        this->pelec->pot = new elecstate::Potential(
-            GlobalC::rhopw,
-            &GlobalC::ucell,
-            &(GlobalC::ppcell.vloc),
-            &(GlobalC::sf.strucFac),
-            &(GlobalC::en.etxc),
-            &(GlobalC::en.vtxc)
-        );
     }
+    
+    // Inititlize the charge density.
+    this->pelec->charge->allocate(GlobalV::NSPIN, GlobalC::rhopw->nrxx, GlobalC::rhopw->npw);
+
+    // Initializee the potential.
+    this->pelec->pot = new elecstate::Potential(
+        GlobalC::rhopw,
+        &GlobalC::ucell,
+        &(GlobalC::ppcell.vloc),
+        &(GlobalC::sf.strucFac),
+        &(GlobalC::en.etxc),
+        &(GlobalC::en.vtxc)
+    );
     this->pelec_td = dynamic_cast<elecstate::ElecStateLCAO_TDDFT*>(this->pelec);
 
 }
