@@ -69,6 +69,10 @@ void Input_Conv::Convert(void)
         {
             ModuleBase::WARNING_QUIT("Input_Conv","only CG has been implemented for relax_new");
         }
+        if(!INPUT.relax_new && (INPUT.fixed_axes == "shape" || INPUT.fixed_axes == "volume"))
+        {
+            ModuleBase::WARNING_QUIT("Input_Conv","fixed shape and fixed volume only supported for relax_new = 1");
+        }
         GlobalV::fixed_atoms = INPUT.fixed_atoms;
     }
 
