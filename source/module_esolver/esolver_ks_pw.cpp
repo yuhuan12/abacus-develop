@@ -703,7 +703,7 @@ namespace ModuleESolver
         // =======================================
         double diag_ethr = GlobalV::PW_DIAG_THR;
         if(diag_ethr - 1e-2 > -1e-5)   
-            diag_ethr = std::max(1e-13, 0.1*std::min(1e-2,GlobalV::SCF_THR / GlobalV::NELEC));
+            diag_ethr = std::max(1e-13, 0.1*std::min(1e-2,GlobalV::SCF_THR / GlobalV::nelec));
         GlobalV::ofs_running << " PW_DIAG_THR  = "<< diag_ethr << std::endl;
 
         this->hamilt2estates(diag_ethr);

@@ -23,7 +23,7 @@ void Threshold_Elec::set_pw_diag_thr(void) const
     {
         if (abs(GlobalV::PW_DIAG_THR - 1.0e-2) < 1.0e-10)
         {
-            GlobalV::PW_DIAG_THR = 0.1 * std::min(1.0e-2, GlobalV::SCF_THR / GlobalV::NELEC);
+            GlobalV::PW_DIAG_THR = 0.1 * std::min(1.0e-2, GlobalV::SCF_THR / GlobalV::nelec);
         }
     }
     //=================
@@ -76,12 +76,12 @@ void Threshold_Elec::update_pw_diag_thr(const int &iter)
 		//----------------------------
 		if(GlobalV::BASIS_TYPE=="lcao")
 		{
-			GlobalV::PW_DIAG_THR = std::min( GlobalV::PW_DIAG_THR, 0.01*scf_thr/ std::max(1.0, GlobalV::NELEC));
+			GlobalV::PW_DIAG_THR = std::min( GlobalV::PW_DIAG_THR, 0.01*scf_thr/ std::max(1.0, GlobalV::nelec));
 		}
 		// mohan update 2009-09-04
 		else
 		{
-			GlobalV::PW_DIAG_THR = std::min( GlobalV::PW_DIAG_THR, 0.1*scf_thr/ std::max(1.0, GlobalV::NELEC));
+			GlobalV::PW_DIAG_THR = std::min( GlobalV::PW_DIAG_THR, 0.1*scf_thr/ std::max(1.0, GlobalV::nelec));
 			//std::cout << " new pw_diag_thr = " << GlobalV::PW_DIAG_THR << std::endl;
 		}
 

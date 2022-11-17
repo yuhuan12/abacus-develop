@@ -172,7 +172,7 @@ void ESolver_OF::Init(Input &inp, UnitCell &ucell)
     this->nelec = new double[GlobalV::NSPIN];
     if (GlobalV::NSPIN == 1)
     {
-        this->nelec[0] = GlobalV::NELEC;
+        this->nelec[0] = GlobalV::nelec;
     }
     else if (GlobalV::NSPIN == 2)
     {

@@ -661,7 +661,7 @@ void ESolver_KS_LCAO::afterscf(const int istep)
 
     if (GlobalV::deepks_out_labels) // caoyu add 2021-06-04
     {
-        int nocc = GlobalV::NELEC / 2;
+        int nocc = GlobalV::nelec / 2;
         if (GlobalV::deepks_bandgap)
         {
             if (GlobalV::GAMMA_ONLY_LOCAL)
@@ -700,7 +700,7 @@ void ESolver_KS_LCAO::afterscf(const int istep)
                                    "e_base.npy"); // ebase :no deepks E_delta including
             if (GlobalV::deepks_bandgap)
             {
-                int nocc = GlobalV::NELEC / 2;
+                int nocc = GlobalV::nelec / 2;
 
                 ModuleBase::matrix wg_hl;
                 if (GlobalV::GAMMA_ONLY_LOCAL)

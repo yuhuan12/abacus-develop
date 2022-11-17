@@ -23,11 +23,11 @@ void IState_Envelope::begin(const psi::Psi<double>* psid, Local_Orbital_wfc& low
     // if ucell is odd, it's correct,
     // if ucell is even, it's also correct.
     // +1.0e-8 in case like (2.999999999+1)/2
-    int fermi_band = static_cast<int>((GlobalV::NELEC + 1) / 2 + 1.0e-8);
+    int fermi_band = static_cast<int>((GlobalV::nelec + 1) / 2 + 1.0e-8);
     int bands_below = GlobalV::NBANDS_ISTATE;
     int bands_above = GlobalV::NBANDS_ISTATE;
 
-    std::cout << " number of electrons = " << GlobalV::NELEC << std::endl;
+    std::cout << " number of electrons = " << GlobalV::nelec << std::endl;
     std::cout << " number of occupied bands = " << fermi_band << std::endl;
     std::cout << " plot band decomposed charge density below fermi surface with "
         << bands_below << " bands." << std::endl;
@@ -148,11 +148,11 @@ void IState_Envelope::begin(const psi::Psi<std::complex<double>>* psi, Local_Orb
     // if ucell is odd, it's correct,
     // if ucell is even, it's also correct.
     // +1.0e-8 in case like (2.999999999+1)/2
-    int fermi_band = static_cast<int>((GlobalV::NELEC + 1) / 2 + 1.0e-8);
+    int fermi_band = static_cast<int>((GlobalV::nelec + 1) / 2 + 1.0e-8);
     int bands_below = GlobalV::NBANDS_ISTATE;
     int bands_above = GlobalV::NBANDS_ISTATE;
 
-    std::cout << " number of electrons = " << GlobalV::NELEC << std::endl;
+    std::cout << " number of electrons = " << GlobalV::nelec << std::endl;
     std::cout << " number of occupied bands = " << fermi_band << std::endl;
     std::cout << " plot band decomposed charge density below fermi surface with "
         << bands_below << " bands." << std::endl;

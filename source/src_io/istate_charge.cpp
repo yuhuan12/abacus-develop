@@ -46,13 +46,13 @@ void IState_Charge::begin(Gint_Gamma &gg, elecstate::ElecState* pelec)
 	// (1) 
 
 	// (1.2) read in LOWF_GAMMA.dat
-	std::cout << " number of electrons = " << GlobalV::NELEC << std::endl;
+	std::cout << " number of electrons = " << GlobalV::nelec << std::endl;
 
 	// mohan update 2011-03-21
 	// if ucell is odd, it's correct,
 	// if ucell is even, it's also correct.
 	// +1.0e-8 in case like (2.999999999+1)/2
-	fermi_band = static_cast<int>( (GlobalV::NELEC+1)/2 + 1.0e-8 ) ;
+	fermi_band = static_cast<int>( (GlobalV::nelec+1)/2 + 1.0e-8 ) ;
 	std::cout << " number of occupied bands = " << fermi_band << std::endl;
 
 	if(mode == 1)
@@ -164,7 +164,7 @@ void IState_Charge::idmatrix(const int &ib, elecstate::ElecState* pelec)
 		const int ib_local = this->loc->ParaV->trace_loc_col[ib];
 
 		int fermi_band=0;
-		fermi_band = static_cast<int>( (GlobalV::NELEC+1)/2 + 1.0e-8 ) ;
+		fermi_band = static_cast<int>( (GlobalV::nelec+1)/2 + 1.0e-8 ) ;
 
 		if(ib_local>=0)
 		{

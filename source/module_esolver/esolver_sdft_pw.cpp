@@ -168,7 +168,7 @@ void ESolver_SDFT_PW::postprocess()
         int iter = 1;
         int istep = 0;
         hsolver::DiagoIterAssist<double>::PW_DIAG_NMAX = GlobalV::PW_DIAG_NMAX;
-        hsolver::DiagoIterAssist<double>::PW_DIAG_THR = std::max(std::min(1e-5, 0.1 * GlobalV::SCF_THR / std::max(1.0, GlobalV::NELEC)),1e-12);
+        hsolver::DiagoIterAssist<double>::PW_DIAG_THR = std::max(std::min(1e-5, 0.1 * GlobalV::SCF_THR / std::max(1.0, GlobalV::nelec)),1e-12);
         hsolver::DiagoIterAssist<double>::need_subspace = false;
         this->phsol->solve(this->p_hamilt, this->psi[0], this->pelec,this->stowf,istep, iter, GlobalV::KS_SOLVER, true);
         ((hsolver::HSolverPW_SDFT*)phsol)->stoiter.cleanchiallorder();//release lots of memories

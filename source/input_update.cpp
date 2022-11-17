@@ -300,7 +300,7 @@ void Update_input::Bcast()
     Parallel_Common::bcast_string( GlobalV::chg_extrap );//xiaohui modify 2015-02-01
     Parallel_Common::bcast_int( GlobalV::out_chg );
 	Parallel_Common::bcast_int( GlobalC::en.out_dos );
-    Parallel_Common::bcast_double( GlobalV::NELEC );
+    Parallel_Common::bcast_double( GlobalV::nelec );
 	
     Parallel_Common::bcast_int( GlobalV::MD_NSTEP );
     return;

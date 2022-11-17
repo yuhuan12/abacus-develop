@@ -200,7 +200,7 @@ class ENVEnvironment : public ::testing::Environment
     // We need to modify here after reconstruction.
     void SetUp() override
     {
-        GlobalV::NELEC = env->nelec_;
+        GlobalV::nelec = env->nelec_;
         GlobalV::CALCULATION = env->calculation_;
         GlobalV::global_pseudo_dir = env->pseudo_dir_;
         GlobalV::stru_file = env->stru_file_;
@@ -372,7 +372,7 @@ TEST_F(EState,RhoPW)
     }
     // check total number of electrons
     totale = totale * GlobalC::ucell.omega / GlobalC::rhopw->nrxx;
-    EXPECT_NEAR(totale, GlobalV::NELEC, 1e-5);
+    EXPECT_NEAR(totale, GlobalV::nelec, 1e-5);
     delete kk;
 }
 

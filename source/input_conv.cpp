@@ -255,7 +255,7 @@ void Input_Conv::Convert(void)
     // Yu Liu add 2022-09-13
     //----------------------------------------------------------
     GlobalV::GATE_FLAG = INPUT.gate_flag;
-    GlobalV::NELEC = INPUT.nelec;
+    GlobalV::nelec = INPUT.nelec;
     elecstate::Gatefield::zgate = INPUT.zgate;
     elecstate::Gatefield::relax = INPUT.relax;
     elecstate::Gatefield::block = INPUT.block;
@@ -495,7 +495,7 @@ void Input_Conv::Convert(void)
     GlobalV::init_chg = INPUT.init_chg;
     GlobalV::chg_extrap = INPUT.chg_extrap; // xiaohui modify 2015-02-01
     GlobalV::out_chg = INPUT.out_chg;
-    GlobalV::NELEC = INPUT.nelec;
+    GlobalV::nelec = INPUT.nelec;
     GlobalV::out_pot = INPUT.out_pot;
     GlobalC::wf.out_wfc_pw = INPUT.out_wfc_pw;
     GlobalC::wf.out_wfc_r = INPUT.out_wfc_r;

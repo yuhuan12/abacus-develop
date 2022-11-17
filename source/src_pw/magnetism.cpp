@@ -46,7 +46,7 @@ void Magnetism::compute_magnetization(const Charge* const chr)
 		}
 		else
 		{
-			ModuleBase::GlobalFunc::OUT(GlobalV::ofs_running,"nelec",GlobalV::NELEC);
+			ModuleBase::GlobalFunc::OUT(GlobalV::ofs_running,"nelec",GlobalV::nelec);
 		}
     }
 
@@ -83,11 +83,11 @@ double Magnetism::get_nelup(void)
 //===============================================================
 //  this type of electrons are used as "fixed" magnetization.
 //===============================================================
-		nelup = 0.5 * GlobalV::NELEC + 0.5 * tot_magnetization;
+		nelup = 0.5 * GlobalV::nelec + 0.5 * tot_magnetization;
 	}
 	else
 	{
-		nelup = 0.5 * GlobalV::NELEC;
+		nelup = 0.5 * GlobalV::nelec;
 	}
     return nelup;
 }
@@ -101,11 +101,11 @@ double Magnetism::get_neldw(void)
 //===============================================================
 //  this type of electrons are used as "fixed" magnetization.
 //===============================================================
-		neldw = 0.5 * GlobalV::NELEC - 0.5 * tot_magnetization;
+		neldw = 0.5 * GlobalV::nelec - 0.5 * tot_magnetization;
 	}
 	else
 	{
-		neldw = 0.5 * GlobalV::NELEC;
+		neldw = 0.5 * GlobalV::nelec;
 	}
     return neldw ;
 }

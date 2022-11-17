@@ -244,4 +244,5 @@ int out_pot = 0;
 
 std::string init_chg = "";
 int out_chg = 0;
+double nelec = 0;
 } // namespace GlobalV

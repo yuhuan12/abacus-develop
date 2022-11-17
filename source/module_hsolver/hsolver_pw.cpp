@@ -248,7 +248,7 @@ void HSolverPW::update_precondition(std::vector<double> &h_diag, const int ik, c
 
 double HSolverPW::cal_hsolerror()
 {
-    return this->diag_ethr * std::max(1.0, GlobalV::NELEC);
+    return this->diag_ethr * std::max(1.0, GlobalV::nelec);
 }
 
 double HSolverPW::set_diagethr(const int istep, const int iter, const double drho)
@@ -288,7 +288,7 @@ double HSolverPW::set_diagethr(const int istep, const int iter, const double drh
         {
             this->diag_ethr = 1.e-2;
         }
-        this->diag_ethr = std::min(this->diag_ethr, 0.1 * drho / std::max(1.0, GlobalV::NELEC));
+        this->diag_ethr = std::min(this->diag_ethr, 0.1 * drho / std::max(1.0, GlobalV::nelec));
     }
     return this->diag_ethr;
 }
@@ -299,7 +299,7 @@ double HSolverPW::reset_diagethr(std::ofstream& ofs_running, const double hsover
     ModuleBase::WARNING("scf", "Threshold on eigenvalues was too large.");
     ofs_running << " hsover_error=" << hsover_error << " > DRHO=" << drho << std::endl;
     ofs_running << " Origin diag_ethr = " << this->diag_ethr << std::endl;
-    this->diag_ethr = 0.1 * drho / GlobalV::NELEC;
+    this->diag_ethr = 0.1 * drho / GlobalV::nelec;
     ofs_running << " New    diag_ethr = " << this->diag_ethr << std::endl;
     return this->diag_ethr;
 }
