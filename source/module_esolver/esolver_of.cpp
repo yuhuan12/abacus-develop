@@ -37,7 +37,7 @@ void ESolver_OF::Init(Input &inp, UnitCell &ucell)
     this->of_tolp = inp.of_tolp;
     this->maxIter = inp.scf_nmax;
 
-    GlobalC::CHR.cal_nelec();
+    chr.cal_nelec();
 
 	if(ucell.atoms[0].ncpp.xc_func=="HSE"||ucell.atoms[0].ncpp.xc_func=="PBE0")
 	{
@@ -117,7 +117,7 @@ void ESolver_OF::Init(Input &inp, UnitCell &ucell)
 
     if(this->pelec == nullptr)
     {
-        this->pelec = new elecstate::ElecState((Charge*)(&GlobalC::CHR));
+        this->pelec = new elecstate::ElecState((Charge*)(&chr));
     }
 
     this->pelec->charge->allocate(GlobalV::NSPIN, GlobalC::rhopw->nrxx, GlobalC::rhopw->npw);
@@ -1062,7 +1062,7 @@ void ESolver_OF::cal_Force(ModuleBase::matrix& force)
 {
     Forces ff;
     ModuleBase::matrix placeholder_wg;//using a placeholder for this template interface, would be refactor later
-    ff.init(force, placeholder_wg);
+    ff.init(force, placeholder_wg, pelec->charge);
 }
 
 void ESolver_OF::cal_Stress(ModuleBase::matrix& stress)

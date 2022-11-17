@@ -79,7 +79,7 @@ void ESolver_KS_LCAO_TDDFT::Init(Input& inp, UnitCell& ucell)
 
     if(this->pelec == nullptr)
     {
-        this->pelec = new elecstate::ElecStateLCAO_TDDFT(   &(GlobalC::CHR),
+        this->pelec = new elecstate::ElecStateLCAO_TDDFT(   &(chr),
                                                             &(GlobalC::kv),
                                                             GlobalC::kv.nks,
                                                             GlobalV::NBANDS,

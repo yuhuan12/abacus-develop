@@ -151,7 +151,7 @@ void ESolver_KS_LCAO::Init(Input& inp, UnitCell& ucell)
 
     if(this->pelec == nullptr)
     {
-        this->pelec = new elecstate::ElecStateLCAO(&(GlobalC::CHR),
+        this->pelec = new elecstate::ElecStateLCAO(&(chr),
                                                    &(GlobalC::kv),
                                                    GlobalC::kv.nks,
                                                    GlobalV::NBANDS,

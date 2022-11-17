@@ -46,7 +46,7 @@ namespace ModuleESolver
     void ESolver_KS::Init(Input& inp, UnitCell& ucell)
     {
         ESolver_FP::Init(inp,ucell);
-        GlobalC::CHR.cal_nelec();
+        chr.cal_nelec();
 
         /* it has been established that that
          xc_func is same for all elements, therefore

@@ -70,7 +70,7 @@ public:
         const double *rhoc,
         double *rhocg,
         ModulePW::PW_Basis* rho_basis
-    );
+    ) const;
 
 	double check_ne(const double *rho_in) const;
 

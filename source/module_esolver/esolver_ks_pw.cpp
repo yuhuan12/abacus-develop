@@ -130,7 +130,7 @@ namespace ModuleESolver
         //init ElecState,
         if(this->pelec == nullptr)
         {
-            this->pelec = new elecstate::ElecStatePW<double>( GlobalC::wfcpw, &(GlobalC::CHR), (K_Vectors*)(&(GlobalC::kv)), GlobalV::NBANDS);
+            this->pelec = new elecstate::ElecStatePW<double>( GlobalC::wfcpw, &(chr), (K_Vectors*)(&(GlobalC::kv)), GlobalV::NBANDS);
         }
 
         // Inititlize the charge density.
@@ -593,7 +593,7 @@ namespace ModuleESolver
     void ESolver_KS_PW::cal_Force(ModuleBase::matrix& force)
     {
         Forces ff;
-        ff.init(force, this->pelec->wg, this->psi);
+        ff.init(force, this->pelec->wg, pelec->charge, this->psi);
     }
 
     void ESolver_KS_PW::cal_Stress(ModuleBase::matrix& stress)

@@ -742,7 +742,7 @@ void Charge::non_linear_core_correction
     const double *rab,
     const double *rhoc,
     double *rhocg,
-	ModulePW::PW_Basis* rho_basis)
+	ModulePW::PW_Basis* rho_basis) const
 {
     ModuleBase::TITLE("charge","drhoc");
     double gx = 0.0;

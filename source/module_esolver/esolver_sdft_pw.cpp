@@ -37,7 +37,7 @@ void ESolver_SDFT_PW::Init(Input &inp, UnitCell &ucell)
     ESolver_KS::Init(inp,ucell);
 
     
-    this->pelec = new elecstate::ElecStatePW_SDFT( GlobalC::wfcpw, &(GlobalC::CHR), (K_Vectors*)(&(GlobalC::kv)), GlobalV::NBANDS);
+    this->pelec = new elecstate::ElecStatePW_SDFT( GlobalC::wfcpw, &(chr), (K_Vectors*)(&(GlobalC::kv)), GlobalV::NBANDS);
 
     // Inititlize the charge density.
     this->pelec->charge->allocate(GlobalV::NSPIN, GlobalC::rhopw->nrxx, GlobalC::rhopw->npw);
@@ -147,12 +147,12 @@ void ESolver_SDFT_PW::cal_Energy(double& etot)
 void ESolver_SDFT_PW::cal_Force(ModuleBase::matrix &force)
 {
 	Sto_Forces ff;
-    ff.init(force, this->pelec->wg, this->psi, this->stowf);
+    ff.init(force, this->pelec->wg, this->psi, this->stowf, pelec->charge);
 }
 void ESolver_SDFT_PW::cal_Stress(ModuleBase::matrix &stress)
 {
 	Sto_Stress_PW ss;
-    ss.cal_stress(stress, this->pelec->wg, this->psi, this->stowf);
+    ss.cal_stress(stress, this->pelec->wg, this->psi, this->stowf, pelec->charge);
 }
 void ESolver_SDFT_PW::postprocess()
 {
