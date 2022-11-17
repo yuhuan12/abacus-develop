@@ -279,7 +279,7 @@ namespace ModuleESolver
 
         // mohan move harris functional to here, 2012-06-05
         // use 'rho(in)' and 'v_h and v_xc'(in)
-        GlobalC::en.deband_harris = GlobalC::en.delta_e(this->pelec->pot);
+        GlobalC::en.deband_harris = GlobalC::en.delta_e(this->pelec);
 
         //(2) save change density as previous charge,
         // prepared fox mixing.
@@ -347,7 +347,7 @@ namespace ModuleESolver
         // in sum_band
         // need 'rho(out)' and 'vr (v_h(in) and v_xc(in))'
 
-        GlobalC::en.deband = GlobalC::en.delta_e(this->pelec->pot);
+        GlobalC::en.deband = GlobalC::en.delta_e(this->pelec);
         //if (LOCAL_BASIS) xiaohui modify 2013-09-02
     }
 
@@ -357,7 +357,7 @@ namespace ModuleESolver
         if (!this->conv_elec)
         {
             this->pelec->pot->update_from_charge(this->pelec->charge, &GlobalC::ucell);
-            GlobalC::en.delta_escf(this->pelec->pot);
+            GlobalC::en.delta_escf(this->pelec);
         }
         else
         {

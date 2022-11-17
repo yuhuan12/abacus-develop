@@ -115,7 +115,7 @@ void ESolver_KS_LCAO_TDDFT::eachiterinit(const int istep, const int iter)
     if (iter == 1) GlobalC::CHR_MIX.reset();
 
     // mohan update 2012-06-05
-    GlobalC::en.deband_harris = GlobalC::en.delta_e(this->pelec->pot);
+    GlobalC::en.deband_harris = GlobalC::en.delta_e(this->pelec);
 
     // mohan move it outside 2011-01-13
     // first need to calculate the weight according to
@@ -175,7 +175,7 @@ void ESolver_KS_LCAO_TDDFT::eachiterinit(const int istep, const int iter)
             // rho1 and rho2 are the same rho.
             // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             this->pelec->pot->init_pot(istep, this->pelec->charge);
-            GlobalC::en.delta_escf(this->pelec->pot);
+            GlobalC::en.delta_escf(this->pelec);
         }
     }
 
@@ -279,7 +279,7 @@ void ESolver_KS_LCAO_TDDFT::hamilt2density(int istep, int iter, double ethr)
     GlobalC::ucell.magnet.compute_magnetization(pelec->charge);
 
     // (7) calculate delta energy
-    GlobalC::en.deband = GlobalC::en.delta_e(this->pelec->pot);
+    GlobalC::en.deband = GlobalC::en.delta_e(this->pelec);
 }
 
 void ESolver_KS_LCAO_TDDFT::updatepot(const int istep, const int iter)
@@ -301,7 +301,7 @@ void ESolver_KS_LCAO_TDDFT::updatepot(const int istep, const int iter)
         {
             this->pelec->pot->update_for_tddft(istep);
         }
-        GlobalC::en.delta_escf(this->pelec->pot);
+        GlobalC::en.delta_escf(this->pelec);
     }
     else
     {

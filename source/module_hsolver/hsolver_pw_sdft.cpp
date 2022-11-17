@@ -125,7 +125,7 @@ namespace hsolver
 
 		if(GlobalV::MY_STOGROUP == 0)
 		{
-        	GlobalC::en.deband = GlobalC::en.delta_e(pes->pot);
+        	GlobalC::en.deband = GlobalC::en.delta_e(pes);
 		}
         ModuleBase::timer::tick(this->classname, "solve");
         return;
