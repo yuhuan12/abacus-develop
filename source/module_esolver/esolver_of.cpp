@@ -172,7 +172,7 @@ void ESolver_OF::Init(Input &inp, UnitCell &ucell)
     this->nelec = new double[GlobalV::NSPIN];
     if (GlobalV::NSPIN == 1)
     {
-        this->nelec[0] = GlobalC::CHR.nelec;
+        this->nelec[0] = pelec->charge->nelec;
     }
     else if (GlobalV::NSPIN == 2)
     {
@@ -301,7 +301,7 @@ void ESolver_OF::beforeOpt(const int istep)
     Symmetry_rho srho;
     for (int is = 0; is < GlobalV::NSPIN; is++)
     {
-        srho.begin(is, GlobalC::CHR, this->pw_rho, GlobalC::Pgrid, GlobalC::symm);
+        srho.begin(is, *(pelec->charge), this->pw_rho, GlobalC::Pgrid, GlobalC::symm);
     }
 
     for (int is = 0; is < GlobalV::NSPIN; ++is)
@@ -312,15 +312,15 @@ void ESolver_OF::beforeOpt(const int istep)
             {
                 // Here we initialize rho to be uniform, 
                 // because the rho got by pot.init_pot -> Charge::atomic_rho may contain minus elements.
-                GlobalC::CHR.rho[is][ibs] = this->nelec[is]/GlobalC::ucell.omega;
-                this->pphi[is][ibs] = sqrt(GlobalC::CHR.rho[is][ibs]);
+                pelec->charge->rho[is][ibs] = this->nelec[is]/GlobalC::ucell.omega;
+                this->pphi[is][ibs] = sqrt(pelec->charge->rho[is][ibs]);
             }
         }
         else
         {
             for (int ibs = 0; ibs < this->nrxx; ++ibs)
             {
-                this->pphi[is][ibs] = sqrt(GlobalC::CHR.rho[is][ibs]);
+                this->pphi[is][ibs] = sqrt(pelec->charge->rho[is][ibs]);
             }
         }
     }
@@ -345,8 +345,8 @@ void ESolver_OF::beforeOpt(const int istep)
 void ESolver_OF::updateV()
 {
     // (1) get dL/dphi
-    this->pelec->pot->update_from_charge(&GlobalC::CHR, &GlobalC::ucell); // Hartree + XC + external
-    this->kineticPotential(GlobalC::CHR.rho, this->pphi, this->pelec->pot->get_effective_v()); // (kinetic + Hartree + XC + external) * 2 * phi
+    this->pelec->pot->update_from_charge(pelec->charge, &GlobalC::ucell); // Hartree + XC + external
+    this->kineticPotential(pelec->charge->rho, this->pphi, this->pelec->pot->get_effective_v()); // (kinetic + Hartree + XC + external) * 2 * phi
     for (int is = 0; is < GlobalV::NSPIN; ++is)
     {
         const double* vr_eff = this->pelec->pot->get_effective_v(is);
@@ -745,7 +745,7 @@ void ESolver_OF::updateRho()
         for (int ir = 0; ir < this->nrxx; ++ir)
         {
             this->pphi[is][ir] = this->pphi[is][ir] * cos(this->theta[is]) + this->pdirect[is][ir] * sin(this->theta[is]);
-            GlobalC::CHR.rho[is][ir] = this->pphi[is][ir] * this->pphi[is][ir];
+            pelec->charge->rho[is][ir] = this->pphi[is][ir] * this->pphi[is][ir];
         }
     }
     // ============================ for test ===========================
@@ -754,10 +754,10 @@ void ESolver_OF::updateRho()
     //     Symmetry_rho srho;
     //     for (int is = 0; is < GlobalV::NSPIN; is++)
     //     {
-    //         srho.begin(is, GlobalC::CHR, this->pw_rho, GlobalC::Pgrid, GlobalC::symm);
+    //         srho.begin(is, pelec->charge, this->pw_rho, GlobalC::Pgrid, GlobalC::symm);
     //         for (int ibs = 0; ibs < this->nrxx; ++ibs)
     //         {
-    //             this->pphi[is][ibs] = sqrt(GlobalC::CHR.rho[is][ibs]);
+    //             this->pphi[is][ibs] = sqrt(pelec->charge->rho[is][ibs]);
     //         }
     //     }
     // }
@@ -766,8 +766,8 @@ void ESolver_OF::updateRho()
     // {
     //     for (int ir = 0; ir < this->nrxx; ++ir)
     //     {
-    //         GlobalC::CHR.rho_save[is][ir] = GlobalC::CHR.rho[is][ir];
-    //         this->pdeltaRho[is][ir] = GlobalC::CHR.rho[is][ir] - GlobalC::CHR.rho_save[is][ir];
+    //         pelec->charge->rho_save[is][ir] = pelec->charge->rho[is][ir];
+    //         this->pdeltaRho[is][ir] = pelec->charge->rho[is][ir] - pelec->charge->rho_save[is][ir];
     //         this->deltaRhoR += abs(this->pdeltaRho[is][ir]);
 
     //     }
@@ -857,14 +857,14 @@ void ESolver_OF::printInfo()
         // cout << "Iter        Etot(Ha)          Theta       PotNorm        deltaRhoG       deltaRhoR   deltaE" << endl;
     } 
     // ============ used to compare with PROFESS3.0 ================
-    // double minDen = GlobalC::CHR.rho[0][0];
-    // double maxDen = GlobalC::CHR.rho[0][0];
+    // double minDen = pelec->charge->rho[0][0];
+    // double maxDen = pelec->charge->rho[0][0];
     // double minPot = this->pdEdphi[0][0];
     // double maxPot = this->pdEdphi[0][0];
     // for (int i = 0; i < this->nrxx; ++i)
     // {
-    //     if (GlobalC::CHR.rho[0][i] < minDen) minDen = GlobalC::CHR.rho[0][i];
-    //     if (GlobalC::CHR.rho[0][i] > maxDen) maxDen = GlobalC::CHR.rho[0][i];
+    //     if (pelec->charge->rho[0][i] < minDen) minDen = pelec->charge->rho[0][i];
+    //     if (pelec->charge->rho[0][i] > maxDen) maxDen = pelec->charge->rho[0][i];
     //     if (this->pdEdphi[0][i] < minPot) minPot = this->pdEdphi[0][i];
     //     if (this->pdEdphi[0][i] > maxPot) maxPot = this->pdEdphi[0][i];
     // }
@@ -905,9 +905,9 @@ void ESolver_OF::afterOpt()
             std::stringstream ssc;
             std::stringstream ss1;
             ssc << GlobalV::global_out_dir << "tmp" << "_SPIN" << is + 1 << "_CHG";
-            GlobalC::CHR.write_rho(GlobalC::CHR.rho[is], is, iter, ssc.str(), 3);//mohan add 2007-10-17
+            pelec->charge->write_rho(pelec->charge->rho[is], is, iter, ssc.str(), 3);//mohan add 2007-10-17
             ss1 << GlobalV::global_out_dir << "tmp" << "_SPIN" << is + 1 << "_CHG.cube";
-            GlobalC::CHR.write_rho_cube(GlobalC::CHR.rho[is], is, ss1.str(), 3);
+            pelec->charge->write_rho_cube(pelec->charge->rho[is], is, ss1.str(), 3);
         }
     }
 }
@@ -972,7 +972,7 @@ void ESolver_OF::calV(double *ptempPhi, double *rdLdphi)
             tempRho->rho[is][ir] = tempPhi[is][ir] * tempPhi[is][ir];
         }
     }
-    tempRho->rho_core = GlobalC::CHR.rho_core;
+    tempRho->rho_core = pelec->charge->rho_core;
 
     this->pelec->pot->update_from_charge(tempRho, &GlobalC::ucell);
     ModuleBase::matrix& vr_eff = this->pelec->pot->get_effective_v();
@@ -1047,7 +1047,7 @@ void ESolver_OF::cal_Energy(double& etot)
     double ePP = 0.;                    // electron-ion interaction energy
     for (int is = 0; is < GlobalV::NSPIN; ++is)
     {
-        ePP += this->inner_product(this->pelec->pot->get_fixed_v(), GlobalC::CHR.rho[is], this->nrxx, this->dV);
+        ePP += this->inner_product(this->pelec->pot->get_fixed_v(), pelec->charge->rho[is], this->nrxx, this->dV);
     }
     Parallel_Reduce::reduce_double_all(ePP);
     GlobalC::en.etot += eKE + ePP;
@@ -1091,7 +1091,7 @@ void ESolver_OF::cal_Stress(ModuleBase::matrix& stress)
     {
         this->tf.get_stress(GlobalC::ucell.omega);
         this->vw.get_stress(this->pphi, this->pw_rho);
-        this->wt.get_stress(GlobalC::ucell.omega, GlobalC::CHR.rho, this->pw_rho, GlobalV::of_vw_weight);
+        this->wt.get_stress(GlobalC::ucell.omega, pelec->charge->rho, this->pw_rho, GlobalV::of_vw_weight);
         kinetic_stress += this->tf.stress + this->vw.stress + this->wt.stress;
     }
     else if (this->of_kinetic == "tf+")
