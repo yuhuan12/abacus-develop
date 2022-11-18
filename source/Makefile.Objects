@@ -91,7 +91,6 @@ OBJS_MAIN=main.o\
     input.o \
     input_conv.o\
     driver_run.o\
-    input_update.o
 
 OBJS_BASE=complexarray.o\
     complexmatrix.o\

@@ -5,7 +5,6 @@
 #include "../module_base/global_function.h"
 #include "../src_io/print_info.h"
 #include "../src_pw/global.h"
-#include "input_update.h"
 #include "src_io/chi0_hilbert.h"
 #include "src_lcao/ELEC_evolve.h"
 #include "src_lcao/dftu.h"
@@ -295,10 +294,6 @@ void ESolver_KS_LCAO::Init_Basis_lcao(ORB_control& orb_con, Input& inp, UnitCell
 
 void ESolver_KS_LCAO::eachiterinit(const int istep, const int iter)
 {
-    std::string ufile = "CHANGE";
-    Update_input UI;
-    UI.init(ufile);
-
     if (GlobalV::dft_plus_u)
         GlobalC::dftu.iter_dftu = iter;
 

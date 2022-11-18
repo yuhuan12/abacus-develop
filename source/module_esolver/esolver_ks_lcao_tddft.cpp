@@ -7,7 +7,6 @@
 #include "../module_base/scalapack_connector.h"
 #include "../src_io/print_info.h"
 #include "../src_pw/global.h"
-#include "input_update.h"
 #include "src_io/chi0_hilbert.h"
 #include "src_lcao/ELEC_evolve.h"
 #include "src_pw/occupy.h"
@@ -106,10 +105,6 @@ void ESolver_KS_LCAO_TDDFT::Init(Input& inp, UnitCell& ucell)
 
 void ESolver_KS_LCAO_TDDFT::eachiterinit(const int istep, const int iter)
 {
-    std::string ufile = "CHANGE";
-    Update_input UI;
-    UI.init(ufile);
-
     // mohan add 2010-07-16
     // used for pulay mixing.
     if (iter == 1) GlobalC::CHR_MIX.reset();
