@@ -190,7 +190,6 @@ void ESolver_KS_LCAO::Init(Input& inp, UnitCell& ucell)
     {
         this->pelec->fixed_weights(GlobalV::ocp_kb.data());
     }
-#endif
 }
 
 void ESolver_KS_LCAO::cal_Energy(double& etot)
