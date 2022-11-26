@@ -80,8 +80,8 @@ void Potential::update_for_tddft(int istep)
         //====================================================
         // add external linear potential, fuxiang add in 2017/05
         //====================================================
-        this->vextold = new double[GlobalC::rhopw->nrxx];
-        this->vext = new double[GlobalC::rhopw->nrxx];
+        double* vextold = new double[GlobalC::rhopw->nrxx];
+        double* vext = new double[GlobalC::rhopw->nrxx];
         const int yz = GlobalC::rhopw->ny * GlobalC::rhopw->nplane;
         int index, i, j, k;
 
@@ -99,16 +99,16 @@ void Potential::update_for_tddft(int istep)
                 {
                     if (k < GlobalC::rhopw->nx * 0.05)
                     {
-                        this->vextold[ir] = (0.019447 * k / GlobalC::rhopw->nx - 0.001069585) * GlobalC::ucell.lat0;
+                        vextold[ir] = (0.019447 * k / GlobalC::rhopw->nx - 0.001069585) * GlobalC::ucell.lat0;
                         // here 0.019447, 0.001069585 means
                     }
                     else if (k >= GlobalC::rhopw->nx * 0.05 && k < GlobalC::rhopw->nx * 0.95)
                     {
-                        this->vextold[ir] = -0.0019447 * k / GlobalC::rhopw->nx * GlobalC::ucell.lat0;
+                        vextold[ir] = -0.0019447 * k / GlobalC::rhopw->nx * GlobalC::ucell.lat0;
                     }
                     else if (k >= GlobalC::rhopw->nx * 0.95)
                     {
-                        this->vextold[ir]
+                        vextold[ir]
                             = (0.019447 * (1.0 * k / GlobalC::rhopw->nx - 1) - 0.001069585) * GlobalC::ucell.lat0;
                     }
                 }
@@ -116,15 +116,15 @@ void Potential::update_for_tddft(int istep)
                 {
                     if (j < GlobalC::rhopw->nx * 0.05)
                     {
-                        this->vextold[ir] = (0.019447 * j / GlobalC::rhopw->nx - 0.001069585) * GlobalC::ucell.lat0;
+                        vextold[ir] = (0.019447 * j / GlobalC::rhopw->nx - 0.001069585) * GlobalC::ucell.lat0;
                     }
                     else if (j >= GlobalC::rhopw->nx * 0.05 && j < GlobalC::rhopw->nx * 0.95)
                     {
-                        this->vextold[ir] = -0.0019447 * j / GlobalC::rhopw->nx * GlobalC::ucell.lat0;
+                        vextold[ir] = -0.0019447 * j / GlobalC::rhopw->nx * GlobalC::ucell.lat0;
                     }
                     else if (j >= GlobalC::rhopw->nx * 0.95)
                     {
-                        this->vextold[ir]
+                        vextold[ir]
                             = (0.019447 * (1.0 * j / GlobalC::rhopw->nx - 1) - 0.001069585) * GlobalC::ucell.lat0;
                     }
                 }
@@ -132,15 +132,15 @@ void Potential::update_for_tddft(int istep)
                 {
                     if (i < GlobalC::rhopw->nx * 0.05)
                     {
-                        this->vextold[ir] = (0.019447 * i / GlobalC::rhopw->nx - 0.001069585) * GlobalC::ucell.lat0;
+                        vextold[ir] = (0.019447 * i / GlobalC::rhopw->nx - 0.001069585) * GlobalC::ucell.lat0;
                     }
                     else if (i >= GlobalC::rhopw->nx * 0.05 && i < GlobalC::rhopw->nx * 0.95)
                     {
-                        this->vextold[ir] = -0.0019447 * i / GlobalC::rhopw->nx * GlobalC::ucell.lat0;
+                        vextold[ir] = -0.0019447 * i / GlobalC::rhopw->nx * GlobalC::ucell.lat0;
                     }
                     else if (i >= GlobalC::rhopw->nx * 0.95)
                     {
-                        this->vextold[ir]
+                        vextold[ir]
                             = (0.019447 * (1.0 * i / GlobalC::rhopw->nx - 1) - 0.001069585) * GlobalC::ucell.lat0;
                     }
                 }
@@ -155,7 +155,7 @@ void Potential::update_for_tddft(int istep)
 
                     double vext_gauss_timenow
                         = (istep - vext_gauss_timecenter) * td_dt * 41.34; // 41.34 is conversion factor of fs-a.u.
-                    this->vext[ir] = this->vextold[ir] * cos(vext_gauss_omega / 27.2116 * vext_gauss_timenow)
+                    vext[ir] = vextold[ir] * cos(vext_gauss_omega / 27.2116 * vext_gauss_timenow)
                                      * exp(-vext_gauss_timenow * vext_gauss_timenow * 0.5 / (vext_gauss_sigmasquare))
                                      * vext_gauss_amplitude;
                 }
@@ -171,17 +171,17 @@ void Potential::update_for_tddft(int istep)
                     //  The parameters should be written in INPUT!
                     if (istep < vext_trapezoid_stepcut1)
                     {
-                        this->vext[ir] = this->vextold[ir] * vext_trapezoid_amplitude * istep / vext_trapezoid_stepcut1
+                        vext[ir] = vextold[ir] * vext_trapezoid_amplitude * istep / vext_trapezoid_stepcut1
                                          * cos(w_h * istep * td_dt * 41.34);
                     }
                     else if (istep < vext_trapezoid_stepcut2)
                     {
-                        this->vext[ir]
-                            = this->vextold[ir] * vext_trapezoid_amplitude * cos(w_h * istep * td_dt * 41.34);
+                        vext[ir]
+                            = vextold[ir] * vext_trapezoid_amplitude * cos(w_h * istep * td_dt * 41.34);
                     }
                     else if (istep < vext_trapezoid_stepcut3)
                     {
-                        this->vext[ir] = this->vextold[ir] * vext_trapezoid_amplitude
+                        vext[ir] = vextold[ir] * vext_trapezoid_amplitude
                                          * (vext_trapezoid_stepcut3 - istep) / vext_trapezoid_stepcut1
                                          * cos(w_h * istep * td_dt * 41.34);
                     }
@@ -196,11 +196,11 @@ void Potential::update_for_tddft(int istep)
                     const double timenow = (istep)*td_dt * 41.34;
                     // The parameters should be written in INPUT!
 
-                    // this->vext[ir] =
-                    // this->vextold[ir]*2.74*cos(0.856*timenow)*sin(0.0214*timenow)*sin(0.0214*timenow);
-                    // this->vext[ir] =
-                    // this->vextold[ir]*2.74*cos(0.856*timenow)*sin(0.0214*timenow)*sin(0.0214*timenow)*0.01944;
-                    this->vext[ir] = this->vextold[ir] * vext_trigonometric_amplitude * cos(w_h2 * timenow)
+                    // vext[ir] =
+                    // vextold[ir]*2.74*cos(0.856*timenow)*sin(0.0214*timenow)*sin(0.0214*timenow);
+                    // vext[ir] =
+                    // vextold[ir]*2.74*cos(0.856*timenow)*sin(0.0214*timenow)*sin(0.0214*timenow)*0.01944;
+                    vext[ir] = vextold[ir] * vext_trigonometric_amplitude * cos(w_h2 * timenow)
                                      * sin(w_h3 * timenow) * sin(w_h3 * timenow);
                 }
 
@@ -208,15 +208,15 @@ void Potential::update_for_tddft(int istep)
                 if (vext_time_domain == 4)
                 {
                     if (istep < vext_heaviside_switch)
-                        this->vext[ir] = this->vextold[ir] * vext_heaviside_amplitude;
+                        vext[ir] = vextold[ir] * vext_heaviside_amplitude;
                     else if (istep >= vext_heaviside_switch)
-                        this->vext[ir] = this->vextold[ir] * 0;
+                        vext[ir] = vextold[ir] * 0;
                 }
 
                 this->v_effective(is, ir) += vext[ir];
 
                 // std::cout << "x: " << k <<"	" << "y: " << j <<"	"<< "z: "<< i <<"	"<< "ir: " << ir <<
-                // std::endl; std::cout << "vext: " << this->vext[ir] << std::endl; std::cout << "vrs: " <<
+                // std::endl; std::cout << "vext: " << vext[ir] << std::endl; std::cout << "vrs: " <<
                 // vrs(is,ir) <<std::endl;
             }
         }
@@ -231,10 +231,10 @@ void Potential::update_for_tddft(int istep)
                 j = index / GlobalC::rhopw->nplane; // get y
                 k = index - GlobalC::rhopw->nplane * j + GlobalC::rhopw->startz_current; // get x
 
-                // this->vextold[ir] = this->vext_S[ir] + this->vext_A2S[ir] + this->vext_Ar[ir];
+                // vextold[ir] = vext_S[ir] + vext_A2S[ir] + vext_Ar[ir];
 
-                // this->vext_S = new double[GlobalC::rhopw->nrxx];
-                // this->vext_A2S = new double[GlobalC::rhopw->nrxx];
+                // vext_S = new double[GlobalC::rhopw->nrxx];
+                // vext_A2S = new double[GlobalC::rhopw->nrxx];
 
                 // Calculate A(t)
                 double A_t;
@@ -286,10 +286,10 @@ void Potential::update_for_tddft(int istep)
                     }
                 }
 
-                // this->vextold[ir] = this->vext_S[ir] + this->vext_A2S[ir];
+                // vextold[ir] = vext_S[ir] + vext_A2S[ir];
                 for (int it = 0; it < GlobalC::rhopw->nrxx; ++it)
                 {
-                    this->vextold[it] = A_t * A_t;
+                    vextold[it] = A_t * A_t;
                 }
                 // Another term <psi|A▽|psi> will be supplemented at the kinetic energy term.
 
@@ -300,7 +300,7 @@ void Potential::update_for_tddft(int istep)
                 {
                     double vext_gauss_timenow
                         = (istep - vext_gauss_timecenter) * td_dt * 41.34; // 41.34 is conversion factor of fs-a.u.
-                    this->vext[ir] = this->vextold[ir] * cos(vext_gauss_omega / 27.2116 * vext_gauss_timenow)
+                    vext[ir] = vextold[ir] * cos(vext_gauss_omega / 27.2116 * vext_gauss_timenow)
                                      * exp(-vext_gauss_timenow * vext_gauss_timenow * 0.5 / (vext_gauss_sigmasquare))
                                      * vext_gauss_amplitude;
                 }
@@ -313,17 +313,17 @@ void Potential::update_for_tddft(int istep)
 
                     if (istep < vext_trapezoid_stepcut1)
                     {
-                        this->vext[ir] = this->vextold[ir] * vext_trapezoid_amplitude * istep / vext_trapezoid_stepcut1
+                        vext[ir] = vextold[ir] * vext_trapezoid_amplitude * istep / vext_trapezoid_stepcut1
                                          * cos(w_h * istep * td_dt * 41.34);
                     }
                     else if (istep < vext_trapezoid_stepcut2)
                     {
-                        this->vext[ir]
-                            = this->vextold[ir] * vext_trapezoid_amplitude * cos(w_h * istep * td_dt * 41.34);
+                        vext[ir]
+                            = vextold[ir] * vext_trapezoid_amplitude * cos(w_h * istep * td_dt * 41.34);
                     }
                     else if (istep < vext_trapezoid_stepcut3)
                     {
-                        this->vext[ir] = this->vextold[ir] * vext_trapezoid_amplitude
+                        vext[ir] = vextold[ir] * vext_trapezoid_amplitude
                                          * (vext_trapezoid_stepcut3 - istep) / vext_trapezoid_stepcut1
                                          * cos(w_h * istep * td_dt * 41.34);
                     }
@@ -337,11 +337,11 @@ void Potential::update_for_tddft(int istep)
                     const double timenow = (istep)*td_dt * 41.34;
                     // The parameters should be written in INPUT!
 
-                    // this->vext[ir] =
-                    // this->vextold[ir]*2.74*cos(0.856*timenow)*sin(0.0214*timenow)*sin(0.0214*timenow);
-                    // this->vext[ir] =
-                    // this->vextold[ir]*2.74*cos(0.856*timenow)*sin(0.0214*timenow)*sin(0.0214*timenow)*0.01944;
-                    this->vext[ir] = this->vextold[ir] * vext_trigonometric_amplitude * cos(w_h2 * timenow)
+                    // vext[ir] =
+                    // vextold[ir]*2.74*cos(0.856*timenow)*sin(0.0214*timenow)*sin(0.0214*timenow);
+                    // vext[ir] =
+                    // vextold[ir]*2.74*cos(0.856*timenow)*sin(0.0214*timenow)*sin(0.0214*timenow)*0.01944;
+                    vext[ir] = vextold[ir] * vext_trigonometric_amplitude * cos(w_h2 * timenow)
                                      * sin(w_h3 * timenow) * sin(w_h3 * timenow);
                 }
 
@@ -349,23 +349,23 @@ void Potential::update_for_tddft(int istep)
                 if (vext_time_domain == 4)
                 {
                     if (istep < vext_heaviside_switch)
-                        this->vext[ir] = this->vextold[ir] * vext_heaviside_amplitude;
+                        vext[ir] = vextold[ir] * vext_heaviside_amplitude;
                     else if (istep >= vext_heaviside_switch)
-                        this->vext[ir] = this->vextold[ir] * 0;
+                        vext[ir] = vextold[ir] * 0;
                 }
 
                 this->v_effective(is, ir) += vext[ir];
 
                 // std::cout << "x: " << k <<"	" << "y: " << j <<"	"<< "z: "<< i <<"	"<< "ir: " << ir <<
-                // std::endl; std::cout << "vext: " << this->vext[ir] << std::endl; std::cout << "vrs: " <<
+                // std::endl; std::cout << "vext: " << vext[ir] << std::endl; std::cout << "vrs: " <<
                 // vrs(is,ir) <<std::endl;
             }
         }
 
         std::cout << "vext exists" << std::endl;
 
-        delete[] this->vextold;
-        delete[] this->vext;
+        delete[] vextold;
+        delete[] vext;
     }
 
     ModuleBase::timer::tick("potential", "update_for_tddft");

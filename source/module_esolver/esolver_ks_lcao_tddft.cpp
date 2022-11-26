@@ -284,7 +284,7 @@ void ESolver_KS_LCAO_TDDFT::updatepot(const int istep, const int iter)
     {
         this->pelec->pot->update_from_charge(this->pelec->charge, &GlobalC::ucell);
         //It is recommanded to add into register of Potential in the future
-        if (ELEC_evolve::td_vext != 0 && istep < ELEC_evolve::td_timescale)
+        if (ELEC_evolve::td_vext != 0 )
         {
             this->pelec->pot->update_for_tddft(istep);
         }
@@ -293,6 +293,10 @@ void ESolver_KS_LCAO_TDDFT::updatepot(const int istep, const int iter)
     else
     {
         GlobalC::en.cal_converged(this->pelec);
+        if (ELEC_evolve::td_vext != 0 )
+        {
+            this->pelec->pot->update_for_tddft(istep);
+        }
     }
 
     // store wfc
