@@ -1,10 +1,10 @@
 #ifndef GINT_K_H
 #define GINT_K_H
 
-#include "../module_orbital/ORB_atomic_lm.h"
+#include "module_orbital/ORB_atomic_lm.h"
 #include "grid_technique.h"
-#include "../src_lcao/LCAO_matrix.h"
-#include "../src_pw/charge.h"
+#include "module_hamilt_lcao/hamilt_lcaodft/LCAO_matrix.h"
+#include "module_elecstate/module_charge/charge.h"
 #include "gint.h"
 
 // add by jingan for map<> in 2021-12-2, will be deleted in the future
@@ -32,6 +32,11 @@ class Gint_k : public Gint
     void allocate_pvpR(void);
     // destroy the temporary <phi_0 | V | phi_R> matrix element.
     void destroy_pvpR(void);
+
+    // allocate the <phi_0 | V | dphi_R> matrix element.
+    void allocate_pvdpR(void);
+    // destroy the temporary <phi_0 | V | dphi_R> matrix element.
+    void destroy_pvdpR(void);
 
     // folding the < phi_0 | V | phi_R> matrix to 
     // <phi_0i | V | phi_0j>
@@ -68,6 +73,30 @@ class Gint_k : public Gint
         LCAO_Matrix *LM);
 
     void cal_vlocal_R_sparseMatrix(
+        const int &current_spin,
+        const double &sparse_threshold,
+        LCAO_Matrix *LM);
+
+    //------------------------------------------------------
+    // in gint_k_sparse1.cpp 
+    //------------------------------------------------------  
+    // similar to the above 3, just for the derivative
+    void distribute_pvdpR_sparseMatrix(
+        const int current_spin, 
+        const int dim,
+        const double &sparse_threshold, 
+        const std::map<Abfs::Vector3_Order<int>,
+        std::map<size_t, std::map<size_t, double>>> &pvdpR_sparseMatrix,
+        LCAO_Matrix *LM);
+
+    void distribute_pvdpR_soc_sparseMatrix(
+        const int dim,
+        const double &sparse_threshold, 
+        const std::map<Abfs::Vector3_Order<int>,
+        std::map<size_t, std::map<size_t, std::complex<double>>>> &pvdpR_soc_sparseMatrix,
+        LCAO_Matrix *LM);
+
+    void cal_dvlocal_R_sparseMatrix(
         const int &current_spin,
         const double &sparse_threshold,
         LCAO_Matrix *LM);

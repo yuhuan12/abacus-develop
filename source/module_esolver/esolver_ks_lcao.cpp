@@ -1,33 +1,40 @@
 #include "esolver_ks_lcao.h"
 #include "module_io/cal_r_overlap_R.h"
-#include "module_io/density_matrix.h"
+#include "module_io/dm_io.h"
+#include "module_io/write_dm_sparse.h"
+#include "module_io/rho_io.h"
+#include "module_io/write_HS_R.h"
+#include "module_io/write_dos_lcao.h"
+#include "module_io/write_istate_info.h"
+#include "module_io/mulliken_charge.h"
+#include "module_io/nscf_band.h"
+#include "module_io/write_proj_band_lcao.h"
+#include "module_io/nscf_fermi_surf.h"
 
 //--------------temporary----------------------------
-#include "../module_base/global_function.h"
-#include "../module_io/print_info.h"
-#include "../src_pw/global.h"
-#include "src_lcao/ELEC_evolve.h"
-#include "module_dftu/dftu.h"
-#include "src_lcao/dmft.h"
-#include "src_pw/occupy.h"
-#include "src_pw/symmetry_rho.h"
-#include "src_pw/threshold_elec.h"
+#include "module_base/global_function.h"
+#include "module_io/print_info.h"
+#include "module_hamilt_pw/hamilt_pwdft/global.h"
+#include "module_hamilt_lcao/hamilt_lcaodft/global_fp.h"
+#include "module_hamilt_lcao/module_dftu/dftu.h"
+#include "module_elecstate/occupy.h"
+#include "module_elecstate/module_charge/symmetry_rho.h"
 #ifdef __EXX
 // #include "module_rpa/rpa.h"
 #include "module_ri/RPA_LRI.h"
 #endif
 
 #ifdef __DEEPKS
-#include "../module_deepks/LCAO_deepks.h"
+#include "module_hamilt_lcao/module_deepks/LCAO_deepks.h"
 #endif
 //-----force& stress-------------------
-#include "src_lcao/FORCE_STRESS.h"
+#include "module_hamilt_lcao/hamilt_lcaodft/FORCE_STRESS.h"
 
 //-----HSolver ElecState Hamilt--------
 #include "module_elecstate/elecstate_lcao.h"
-#include "module_hamilt/hamilt_lcao.h"
+#include "module_hamilt_lcao/hamilt_lcaodft/hamilt_lcao.h"
 #include "module_hsolver/hsolver_lcao.h"
-#include "module_hamilt/ks_lcao/op_exx_lcao.h"
+#include "module_hamilt_lcao/hamilt_lcaodft/operator_lcao/op_exx_lcao.h"
 // function used by deepks
 #include "module_elecstate/cal_dm.h"
 //---------------------------------------------------
@@ -223,13 +230,107 @@ void ESolver_KS_LCAO::cal_Stress(ModuleBase::matrix& stress)
 
 void ESolver_KS_LCAO::postprocess()
 {
-
     GlobalV::ofs_running << "\n\n --------------------------------------------" << std::endl;
     GlobalV::ofs_running << std::setprecision(16);
     GlobalV::ofs_running << " !FINAL_ETOT_IS " << GlobalC::en.etot * ModuleBase::Ry_to_eV << " eV" << std::endl;
     GlobalV::ofs_running << " --------------------------------------------\n\n" << std::endl;
 
-    GlobalC::en.perform_dos(this->psid, this->psi, this->UHM, this->pelec);
+    if (GlobalC::en.out_dos != 0 || GlobalC::en.out_band != 0 || GlobalC::en.out_proj_band != 0)
+    {
+        GlobalV::ofs_running << "\n\n\n\n";
+        GlobalV::ofs_running << " >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
+        GlobalV::ofs_running << " |                                                                    |" << std::endl;
+        GlobalV::ofs_running << " | Post-processing of data:                                           |" << std::endl;
+        GlobalV::ofs_running << " | DOS (density of states) and bands will be output here.             |" << std::endl;
+        GlobalV::ofs_running << " | If atomic orbitals are used, Mulliken charge analysis can be done. |" << std::endl;
+        GlobalV::ofs_running << " | Also the .bxsf file containing fermi surface information can be    |" << std::endl;
+        GlobalV::ofs_running << " | done here.                                                         |" << std::endl;
+        GlobalV::ofs_running << " |                                                                    |" << std::endl;
+        GlobalV::ofs_running << " <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+        GlobalV::ofs_running << "\n\n\n\n";
+    }
+    // qianrui modify 2020-10-18
+    if (GlobalV::CALCULATION == "scf" || GlobalV::CALCULATION == "md" || GlobalV::CALCULATION == "relax")
+    {
+        ModuleIO::write_istate_info(this->pelec,&(GlobalC::kv),&(GlobalC::Pkpoints));
+    }
+
+    // GlobalV::mulliken charge analysis
+#ifdef __LCAO
+    if (GlobalV::out_mul == 1)
+    {
+        Mulliken_Charge MC(psid, psi);
+        MC.stdout_mulliken(this->UHM, this->pelec->wg);
+    } // qifeng add 2019/9/10
+#endif
+
+    int nspin0 = 1;
+    if (GlobalV::NSPIN == 2) nspin0 = 2;
+
+    if (GlobalC::en.out_band) // pengfei 2014-10-13
+    {
+        int nks = 0;
+        if (nspin0 == 1)
+        {
+            nks = GlobalC::kv.nkstot;
+        }
+        else if (nspin0 == 2)
+        {
+            nks = GlobalC::kv.nkstot / 2;
+        }
+
+        for (int is = 0; is < nspin0; is++)
+        {
+            std::stringstream ss2;
+            ss2 << GlobalV::global_out_dir << "BANDS_" << is + 1 << ".dat";
+            GlobalV::ofs_running << "\n Output bands in file: " << ss2.str() << std::endl;
+            ModuleIO::nscf_band(is, ss2.str(), nks, GlobalV::NBANDS, GlobalC::en.ef*0, this->pelec->ekb,&(GlobalC::kv),&(GlobalC::Pkpoints));
+        }
+    } // out_band
+
+    if (GlobalC::en.out_proj_band) // Projeced band structure added by jiyy-2022-4-20
+    {
+        ModuleIO::write_proj_band_lcao(this->psid,this->psi,this->UHM,this->pelec,&(GlobalC::kv),GlobalC::ucell,GlobalC::ORB,GlobalC::GridD);
+    }
+
+    if (GlobalC::en.out_dos)
+    {
+        ModuleIO::write_dos_lcao(this->psid,
+            this->psi,
+            this->UHM,
+            this->pelec->ekb,
+            this->pelec->wg,
+            GlobalC::en.dos_edelta_ev,
+            GlobalC::en.dos_scale,
+            GlobalC::en.bcoeff);
+
+        if (GlobalC::en.out_dos == 3)
+        {
+            for (int i = 0; i < nspin0; i++)
+            {
+                std::stringstream ss3;
+                ss3 << GlobalV::global_out_dir << "Fermi_Surface_" << i << ".bxsf";
+                ModuleIO::nscf_fermi_surface(ss3.str(),
+                    GlobalC::kv.nks,
+                    GlobalV::NBANDS,
+                    GlobalC::en.ef,
+                    &(GlobalC::kv),
+                    &(GlobalC::Pkpoints),
+                    &(GlobalC::ucell),
+                    this->pelec->ekb);
+            }
+        }
+        
+        if (nspin0 == 1)
+        {
+            GlobalV::ofs_running << " Fermi energy is " << GlobalC::en.ef << " Rydberg" << std::endl;
+        }
+        else if (nspin0 == 2)
+        {
+            GlobalV::ofs_running << " Fermi energy (spin = 1) is " << GlobalC::en.ef_up << " Rydberg" << std::endl;
+            GlobalV::ofs_running << " Fermi energy (spin = 2) is " << GlobalC::en.ef_dw << " Rydberg" << std::endl;
+        }
+    }
 }
 
 void ESolver_KS_LCAO::Init_Basis_lcao(ORB_control& orb_con, Input& inp, UnitCell& ucell)
@@ -549,9 +650,7 @@ void ESolver_KS_LCAO::eachiterfinish(int iter)
         std::stringstream ss1;
         ssc << GlobalV::global_out_dir << "tmp"
             << "_SPIN" << is + 1 << "_CHG";
-        pelec->charge->write_rho(pelec->charge->rho_save[is], is, iter, ssc.str(), precision); // mohan add 2007-10-17
-        ss1 << GlobalV::global_out_dir << "tmp" << "_SPIN" << is + 1 << "_CHG.cube";
-        pelec->charge->write_rho_cube(pelec->charge->rho_save[is], is, ss1.str(), 3);
+        ModuleIO::write_rho(pelec->charge->rho_save[is], is, iter, ssc.str(), precision); // mohan add 2007-10-17
 
         std::stringstream ssd;
 
@@ -577,9 +676,7 @@ void ESolver_KS_LCAO::eachiterfinish(int iter)
             std::stringstream ss1;
             ssc << GlobalV::global_out_dir << "tmp"
                 << "_SPIN" << is + 1 << "_TAU";
-            pelec->charge->write_rho(pelec->charge->kin_r_save[is], is, iter, ssc.str(), precision); // mohan add 2007-10-17
-            ss1 << GlobalV::global_out_dir << "tmp" << "_SPIN" << is + 1 << "_TAU.cube";
-            pelec->charge->write_rho_cube(pelec->charge->kin_r_save[is], is, ss1.str(), 3);
+            ModuleIO::write_rho(pelec->charge->kin_r_save[is], is, iter, ssc.str(), precision); // mohan add 2007-10-17
         }
     }
 
@@ -618,9 +715,7 @@ void ESolver_KS_LCAO::afterscf(const int istep)
         std::stringstream ssc;
         std::stringstream ss1;
         ssc << GlobalV::global_out_dir << "SPIN" << is + 1 << "_CHG";
-        ss1 << GlobalV::global_out_dir << "SPIN" << is + 1 << "_CHG.cube";
-        pelec->charge->write_rho(pelec->charge->rho_save[is], is, 0, ssc.str()); // mohan add 2007-10-17
-        pelec->charge->write_rho_cube(pelec->charge->rho_save[is], is, ss1.str(), 3);
+        ModuleIO::write_rho(pelec->charge->rho_save[is], is, 0, ssc.str()); // mohan add 2007-10-17
 
         std::stringstream ssd;
         if (GlobalV::GAMMA_ONLY_LOCAL)
@@ -653,9 +748,7 @@ void ESolver_KS_LCAO::afterscf(const int istep)
             std::stringstream ssc;
             std::stringstream ss1;
             ssc << GlobalV::global_out_dir << "SPIN" << is + 1 << "_TAU";
-            ss1 << GlobalV::global_out_dir << "SPIN" << is + 1 << "_TAU.cube";
-            pelec->charge->write_rho(pelec->charge->kin_r_save[is], is, 0, ssc.str()); // mohan add 2007-10-17
-            pelec->charge->write_rho_cube(pelec->charge->kin_r_save[is], is, ss1.str(), 3);
+            ModuleIO::write_rho(pelec->charge->kin_r_save[is], is, 0, ssc.str()); // mohan add 2007-10-17
         }
     }
 
@@ -695,7 +788,7 @@ void ESolver_KS_LCAO::afterscf(const int istep)
 
     if (GlobalV::OUT_LEVEL != "m")
     {
-        Threshold_Elec::print_eigenvalue(GlobalV::ofs_running, this->pelec);
+        this->pelec->print_eigenvalue(GlobalV::ofs_running);
     }
 
     if (this->conv_elec)
@@ -896,7 +989,23 @@ void ESolver_KS_LCAO::afterscf(const int istep)
     {
         if( !(GlobalV::CALCULATION=="md" && (istep%hsolver::HSolverLCAO::out_hsR_interval!=0)) )
         {
-            this->output_HS_R(istep, this->pelec->pot->get_effective_v()); // LiuXh add 2019-07-15
+            ModuleIO::output_HS_R(istep, this->pelec->pot->get_effective_v(), this->UHM); // LiuXh add 2019-07-15
+        } // LiuXh add 2019-07-15
+    }
+
+    if (hsolver::HSolverLCAO::out_mat_t)
+    {
+        if( !(GlobalV::CALCULATION=="md" && (istep%hsolver::HSolverLCAO::out_hsR_interval!=0)) )
+        {
+            ModuleIO::output_T_R(istep, this->UHM); // LiuXh add 2019-07-15
+        } // LiuXh add 2019-07-15
+    }
+
+    if (hsolver::HSolverLCAO::out_mat_dh)
+    {
+        if( !(GlobalV::CALCULATION=="md" && (istep%hsolver::HSolverLCAO::out_hsR_interval!=0)) )
+        {
+            ModuleIO::output_dH_R(istep, this->pelec->pot->get_effective_v(), this->UHM); // LiuXh add 2019-07-15
         } // LiuXh add 2019-07-15
     }
 
@@ -908,11 +1017,11 @@ void ESolver_KS_LCAO::afterscf(const int istep)
 
         if (hsolver::HSolverLCAO::out_mat_hsR)
         {
-            r_matrix.out_rR_other(this->LM.output_R_coor);
+            r_matrix.out_rR_other(istep, this->LM.output_R_coor);
         }
         else
         {
-            r_matrix.out_rR();
+            r_matrix.out_rR(istep);
         }
     }
 

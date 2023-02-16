@@ -6,7 +6,7 @@
 #include "../module_base/constants.h"
 
 #ifndef __CELL
-#include "../src_pw/global.h"
+#include "../module_hamilt_pw/hamilt_pwdft/global.h"
 #endif
 #include <cstring>		// Peize Lin fix bug about strcmp 2016-08-02
 
@@ -802,7 +802,7 @@ bool UnitCell::read_atom_positions(std::ifstream &ifpos, std::ofstream &ofs_runn
 	}// end scan_begin
 
 //check if any atom can move in MD
-	if(!this->if_atoms_can_move() && GlobalV::CALCULATION=="md")
+	if(!this->if_atoms_can_move() && GlobalV::CALCULATION=="md" && GlobalV::ESOLVER_TYPE!="tddft")
 	{
 		ModuleBase::WARNING("read_atoms", "no atom can move in MD!");
 		return 0;

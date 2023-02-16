@@ -133,17 +133,26 @@ endif
 ifdef DeePMD_DIR
     HONG  += -D__DPMD -DHIGH_PREC 
     OPTS  += -Wl,--no-as-needed
+
     ##==========================
     ## DeePMD-kit package
     ##==========================
     DeeP_LIB_DIR = ${DeePMD_DIR}/lib
-    LIBS += -L${DeeP_LIB_DIR} -ldeepmd_cc -ldeepmd_op -ldeepmd_op_cuda -Wl,-rpath=${DeeP_LIB_DIR}
     DeeP_INCLUDE_DIR = ${DeePMD_DIR}/include
     INCLUDES += -I${DeeP_INCLUDE_DIR}
+    ifneq ($(wildcard ${DeePMD_DIR}/include/deepmd/deepmd.hpp), )
+        HONG  += -D__DPMDC
+        LIBS += -L${DeeP_LIB_DIR} -ldeepmd_c -Wl,-rpath=${DeeP_LIB_DIR}
+    else
+        LIBS += -L${DeeP_LIB_DIR} -ldeepmd_cc -Wl,-rpath=${DeeP_LIB_DIR}
+    endif
 
     #==========================
     # TensorFlow package
     #==========================
+    ifndef TensorFlow_DIR
+        TensorFlow_DIR = ${DeePMD_DIR}
+    endif
     TensorFlow_LIB_DIR = ${TensorFlow_DIR}/lib
     LIBS += -L${TensorFlow_LIB_DIR} -ltensorflow_cc -Wl,-rpath=${TensorFlow_LIB_DIR}
     TensorFlow_INCLUDE_DIR = ${TensorFlow_DIR}/include
@@ -186,8 +195,8 @@ test:
 
 pw $(BIN_DIR)/${VERSION}-PW.x:
 	@ if [ ! -d $(BIN_DIR) ]; then mkdir $(BIN_DIR); fi
-	@ cd src_pw; $(MAKE) CC=${CC} GPU=${GPU} DEBUG=$(DEBUG) FFTW_DIR=$(FFTW_DIR) OPENBLAS_LIB_DIR=$(OPENBLAS_LIB_DIR) ${PWTAG}
-	@ cp src_pw/${VERSION}-PW.x $(BIN_DIR)/${VERSION}-PW.x
+	@ cd module_hamilt_pw/hamilt_pwdft; $(MAKE) CC=${CC} GPU=${GPU} DEBUG=$(DEBUG) FFTW_DIR=$(FFTW_DIR) OPENBLAS_LIB_DIR=$(OPENBLAS_LIB_DIR) ${PWTAG}
+	@ cp module_hamilt_pw/hamilt_pwdft/${VERSION}-PW.x $(BIN_DIR)/${VERSION}-PW.x
 
 $(BIN_DIR)/${VERSION}.$(suffix) : ${FP_OBJS} ${PDIAG_OBJS} ${HEADERS}
 	${CC} ${OPTS} ${OPTS_MPI} $(FP_OBJS) ${PDIAG_OBJS} ${LIBS} -o  $(BIN_DIR)/${VERSION}.$(suffix)
@@ -207,4 +216,4 @@ ${OBJ_DIR}/%.o:%.cpp
 clean:
 	@ if [ -d $(OBJ_DIR) ]; then rm -rf $(OBJ_DIR); fi
 	@ if [ -d $(BIN_DIR) ]; then rm -rf $(BIN_DIR); fi
-	@ cd src_pw; make clean
+	@ cd module_hamilt_pw/hamilt_pwdft; make clean

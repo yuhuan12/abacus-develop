@@ -5,12 +5,12 @@
 #define GINT_TOOLS_H
 #include "grid_technique.h"
 #include <cstdlib>
-#include "../src_pw/charge.h"
-#include "../src_lcao/LCAO_matrix.h"
+#include "module_elecstate/module_charge/charge.h"
+#include "module_hamilt_lcao/hamilt_lcaodft/LCAO_matrix.h"
 
 namespace Gint_Tools
 {
-    enum class job_type{vlocal, rho, force, tau, vlocal_meta, force_meta};
+    enum class job_type{vlocal, rho, force, tau, vlocal_meta, force_meta, dvlocal};
 	//Hamiltonian, electron density, force, kinetic energy density, Hamiltonian for mGGA
 }
 
