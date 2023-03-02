@@ -77,7 +77,7 @@ else
 endif
 
 ifeq ($(FLOAT), ON)
-    HONG += -D__MIX_PRECISION
+    HONG += -D__ENABLE_FLOAT_FFTW
     ifneq ($(INTEL), ON)
         LIBS += -lfftw3f
     endif
@@ -128,11 +128,10 @@ fft.o\
 pw_basis_k.o\
 pw_transform_k.o\
 memory.o\
-memory_op.o
+memory_op.o\
+depend_mock.o
 
-OTHER_OBJS0=global_variable.o\
-parallel_global.o\
-parallel_reduce.o
+OTHER_OBJS0=
 
 
 TESTFILE0=test1-1-1.o\
