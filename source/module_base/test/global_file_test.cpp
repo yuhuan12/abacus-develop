@@ -39,6 +39,8 @@ TEST_F(GlobalFile,openlog)
         std::ofstream ofs;
         ModuleBase::Global_File::open_log(ofs,"Si","md",true);
         EXPECT_TRUE(ofs.is_open());
+        ofs.close();
         ModuleBase::Global_File::open_log(ofs,"Si","md",false);
         EXPECT_TRUE(ofs.is_open());
+        ofs.close();
 }
