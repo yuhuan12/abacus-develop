@@ -11,6 +11,19 @@ AddTest(
 )
 
 AddTest(
+  TARGET io_input_test_para
+  LIBS ${math_libs} base device
+  SOURCES input_test_para.cpp ../input.cpp
+)
+
+install(FILES input_test_para.sh DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+find_program(BASH bash)
+add_test(NAME io_input_test_para4
+      COMMAND ${BASH} input_test_para.sh
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+AddTest(
   TARGET io_winput_test
   LIBS ${math_libs} base device
   SOURCES winput_test.cpp ../winput.cpp
@@ -23,8 +36,8 @@ AddTest(
 )
 
 AddTest(
-  TARGET io_rwstream_test
-  SOURCES rwstream_test.cpp ../rwstream.cpp
+  TARGET binstream_test
+  SOURCES binstream_test.cpp ../binstream.cpp
 )
 
 AddTest(

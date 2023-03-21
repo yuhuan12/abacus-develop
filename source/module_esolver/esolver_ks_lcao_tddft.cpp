@@ -5,6 +5,7 @@
 #include "module_io/rho_io.h"
 #include "module_io/dipole_io.h"
 #include "module_io/write_HS_R.h"
+#include "module_io/write_HS.h"
 
 //--------------temporary----------------------------
 #include "module_base/blas_connector.h"
@@ -279,6 +280,59 @@ void ESolver_KS_LCAO_TDDFT::hamilt2density(int istep, int iter, double ethr)
 
 void ESolver_KS_LCAO_TDDFT::updatepot(const int istep, const int iter)
 {
+    if (this->conv_elec)
+    {
+        for (int ik = 0; ik < GlobalC::kv.nks; ++ik)
+        {
+            bool bit = false; // LiuXh, 2017-03-21
+            // if set bit = true, there would be error in soc-multi-core calculation, noted by zhengdy-soc
+            if (this->psi != nullptr)
+            {
+                hamilt::MatrixBlock<complex<double>> h_mat, s_mat;
+                this->p_hamilt->matrix(h_mat, s_mat);
+                ModuleIO::saving_HS(h_mat.p,
+                                    s_mat.p,
+                                    bit,
+                                    hsolver::HSolverLCAO::out_mat_hs,
+                                    "data-" + std::to_string(ik),
+                                    this->LOWF.ParaV[0]); // LiuXh, 2017-03-21
+            }
+            else if (this->psid != nullptr)
+            {
+                hamilt::MatrixBlock<double> h_mat, s_mat;
+                this->p_hamilt->matrix(h_mat, s_mat);
+                ModuleIO::saving_HS(h_mat.p,
+                                    s_mat.p,
+                                    bit,
+                                    hsolver::HSolverLCAO::out_mat_hs,
+                                    "data-" + std::to_string(ik),
+                                    this->LOWF.ParaV[0]); // LiuXh, 2017-03-21
+            }
+        }
+    }
+
+    if (this->conv_elec)
+    {
+        if (elecstate::ElecStateLCAO::out_wfc_lcao)
+        {
+            elecstate::ElecStateLCAO::out_wfc_flag = 1;
+        }
+        for (int ik = 0; ik < GlobalC::kv.nks; ik++)
+        {
+            if (this->psi != nullptr)
+            {
+                this->psi[0].fix_k(ik);
+                this->pelec->print_psi(this->psi[0]);
+            }
+            else
+            {
+                this->psid[0].fix_k(ik);
+                this->pelec->print_psi(this->psid[0]);
+            }
+        }
+        elecstate::ElecStateLCAO::out_wfc_flag = 0;
+    }
+
     // (9) Calculate new potential according to new Charge Density.
 
     if (!this->conv_elec)
@@ -354,7 +408,7 @@ void ESolver_KS_LCAO_TDDFT::afterscf(const int istep)
         const int precision = 3;
 
         std::stringstream ssc;
-        ssc << GlobalV::global_out_dir << "SPIN" << is + 1 << "_CHG";
+        ssc << GlobalV::global_out_dir << "SPIN" << is + 1 << "_CHG.cube";
         ModuleIO::write_rho(pelec->charge->rho_save[is], is, 0, ssc.str()); // mohan add 2007-10-17
 
         if (ELEC_evolve::out_dipole == 1)
@@ -375,14 +429,12 @@ void ESolver_KS_LCAO_TDDFT::afterscf(const int istep)
         }
         ModuleIO::write_dm(is, 0, ssd.str(), precision, this->LOC.out_dm, this->LOC.DM);
 
-        /* Broken, please fix it
-                if (GlobalV::out_pot == 1) // LiuXh add 20200701
-                {
-                    std::stringstream ssp;
-                    ssp << GlobalV::global_out_dir << "SPIN" << is + 1 << "_POT";
-                    this->pelec->pot->write_potential(is, 0, ssp.str(), this->pelec->pot->get_effective_v(), precision);
-                }
-        */
+        if (GlobalV::out_pot == 1) // LiuXh add 20200701
+        {
+            std::stringstream ssp;
+            ssp << GlobalV::global_out_dir << "SPIN" << is + 1 << "_POT.cube";
+            this->pelec->pot->write_potential(is, 0, ssp.str(), this->pelec->pot->get_effective_v(), precision);
+        }
     }
 
     if (this->conv_elec)
@@ -416,43 +468,38 @@ void ESolver_KS_LCAO_TDDFT::afterscf(const int istep)
             std::cout << " !! CONVERGENCE HAS NOT BEEN ACHIEVED !!" << std::endl;
     }
 
-    if (hsolver::HSolverLCAO::out_mat_hsR)
+    if( GlobalV::CALCULATION != "md" || (istep % hsolver::HSolverLCAO::out_hsR_interval == 0))
     {
-        if( GlobalV::CALCULATION != "md" || (istep % hsolver::HSolverLCAO::out_hsR_interval == 0))
+        if (hsolver::HSolverLCAO::out_mat_hsR)
         {
             ModuleIO::output_HS_R(istep, this->pelec->pot->get_effective_v(), this->UHM); // LiuXh add 2019-07-15
         }
-    }
 
-    if (hsolver::HSolverLCAO::out_mat_t)
-    {
-        if( GlobalV::CALCULATION != "md" || (istep % hsolver::HSolverLCAO::out_hsR_interval == 0))
+        if (hsolver::HSolverLCAO::out_mat_t)
         {
             ModuleIO::output_T_R(istep, this->UHM); // LiuXh add 2019-07-15
         }
-    }
 
-    if (hsolver::HSolverLCAO::out_mat_dh)
-    {
-        if( GlobalV::CALCULATION != "md" || (istep % hsolver::HSolverLCAO::out_hsR_interval == 0))
+        if (hsolver::HSolverLCAO::out_mat_dh)
         {
             ModuleIO::output_dH_R(istep, this->pelec->pot->get_effective_v(), this->UHM); // LiuXh add 2019-07-15
         }
-    }   
 
-    // add by jingan for out r_R matrix 2019.8.14
-    if (INPUT.out_mat_r)
-    {
-        cal_r_overlap_R r_matrix;
-        r_matrix.init(*this->LOWF.ParaV);
+        // add by jingan for out r_R matrix 2019.8.14
+        if (INPUT.out_mat_r)
+        {
+            cal_r_overlap_R r_matrix;
+            r_matrix.init(*this->LOWF.ParaV);
 
-        if (hsolver::HSolverLCAO::out_mat_hsR)
-        {
-            r_matrix.out_rR_other(istep, this->LM.output_R_coor);
-        }
-        else
-        {
-            r_matrix.out_rR(istep);
+            if (hsolver::HSolverLCAO::out_mat_hsR)
+            {
+                r_matrix.out_rR_other(istep, this->LM.output_R_coor);
+            }
+            else
+            {
+                r_matrix.out_rR(istep);
+            
+            }
         }
     }
 }
