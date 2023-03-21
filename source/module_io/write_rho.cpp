@@ -11,27 +11,20 @@ void ModuleIO::write_rho(
 	const bool for_plot)
 {
 	ModuleBase::TITLE("ModuleIO","write_rho");
-
+	
 	if (GlobalV::out_chg==0) 
 	{
 		return;
 	}
-	else if(iter % GlobalV::out_chg != 0) 
-	{
-		return; // mohan add 2010-05-22
-	}
-	
+
 	time_t start, end;
 	std::ofstream ofs_cube;
 
-	std::string fn_cube = fn;
-	fn_cube.append(".cube");
-	
 	if(GlobalV::MY_RANK==0)
 	{
 		start = time(NULL);
 
-		ofs_cube.open(fn_cube.c_str());
+		ofs_cube.open(fn.c_str());
 		
 		if (!ofs_cube)
 		{
@@ -39,7 +32,7 @@ void ModuleIO::write_rho(
 		}	
 
 		/// output header for cube file
-		ofs_cube << "Cubefile created from ABACUS SCF calculation" << std::endl;
+		ofs_cube << "Cubefile created from ABACUS SCF calculation. The inner loop is z index, followed by y index, x index in turn." << std::endl;
 		// ofs_cube << "Contains the selected quantity on a FFT grid" << std::endl;
 		ofs_cube << GlobalV::NSPIN << " (nspin) ";
 		if(GlobalV::NSPIN==1 || GlobalV::NSPIN == 4)
@@ -231,7 +224,6 @@ void ModuleIO::write_rho(
 				// GlobalV::ofs_running << "\n Receieve First number = " << zpiece[0];
 			}
 
-			// write data	
 			if(GlobalV::MY_RANK==0)
 			{
 				/// for cube file
